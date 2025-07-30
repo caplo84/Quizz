@@ -1,0 +1,57 @@
+# === Node (React frontend) ===
+node_modules/
+dist/
+build/
+.vite/
+.env
+.env.*.local
+*.log
+npm-debug.log*
+
+# Vercel
+.vercel/
+
+# === Go (Gin backend) ===
+/bin/
+/dist/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Go workspace
+/go.sum
+/go.mod
+
+# Golang tool files
+*.prof
+*.pb.go
+*.gen.go
+
+# Env and config
+.env
+.env.local
+.env.production
+.env.development
+
+# === IDEs ===
+.vscode/
+.idea/
+*.swp
+
+# === OS / Misc ===
+.DS_Store
+Thumbs.db
+
+# === Database ===
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+
+# === Railway / Local builds ===
+railway.json
+/tmp/

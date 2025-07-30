@@ -1,0 +1,24 @@
+{
+    "name": "Frontend Dev Container",
+    "build": {
+      "dockerfile": "Dockerfile",
+      "context": ".."
+    },
+    "postCreateCommand": "npm install",
+    "forwardPorts": [3000],
+    "workspaceFolder": "/app",
+    "features": {},
+    "customizations": {
+      "vscode": {
+        "extensions": [
+          "dbaeumer.vscode-eslint",
+          "esbenp.prettier-vscode"
+        ],
+        "settings": {
+          "terminal.integrated.shell.linux": "/bin/sh"
+        }
+      }
+    },
+    "remoteUser": "node"
+  }
+  
