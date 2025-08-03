@@ -1,0 +1,48 @@
+{
+  "name": "backend-dev",
+  "dockerComposeFile": [
+    "../docker-compose.yml"
+  ],
+  "service": "app",
+  "workspaceFolder": "/workspace",
+  "settings": {
+    "go.gopath": "/go",
+    "go.toolsManagement.autoUpdate": true
+  },
+  "postCreateCommand": "go mod tidy",
+  "remoteEnv": {
+    "GO111MODULE": "on"
+  },
+  "forwardPorts": [5432, 8080],
+  "waitFor": "onCreateCommand",
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "golang.go",
+        "ms-azuretools.vscode-docker",
+        "davidanson.vscode-markdownlint",
+        "eamodio.gitlens",
+        "shardulm94.trailing-spaces",
+        "stkb.rewrap"
+      ],
+      "settings": {
+        "files.eol": "\n",
+        "editor.formatOnSave": true,
+        "go.useLanguageServer": true,
+        "[go]": {
+          "editor.codeActionsOnSave": {
+            "source.organizeImports": "always"
+          }
+        },
+        "gopls": {
+          "usePlaceholders": false,
+          "staticcheck": true
+        }
+      }
+    }
+  },
+  "context": "${localWorkspaceFolder}"
+}
