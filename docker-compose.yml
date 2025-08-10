@@ -1,0 +1,64 @@
+version: "3.8"
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - devnet
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    volumes:
+      - ./backend:/workspace
+    environment:
+      DB_HOST: postgres
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: go_blog
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - devnet
+    command: ["sh", "-c", "/usr/local/bin/wait-for-it.sh postgres:5432 -- tail -f /dev/null"]
+
+  postgres:
+    image: postgres:15
+    container_name: go-blog-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: go_blog
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - devnet
+
+  redis:
+    image: redis:7
+    container_name: quizz-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - devnet
+
+volumes:
+  pgdata:
+
+networks:
+  devnet:
