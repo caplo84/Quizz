@@ -17,8 +17,11 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
+	"github.com/caplo84/quizz-backend/internal/handlers"
 	"github.com/caplo84/quizz-backend/internal/models"
 	"github.com/caplo84/quizz-backend/internal/middleware"
+	"github.com/caplo84/quizz-backend/internal/repository"
+	"github.com/caplo84/quizz-backend/internal/services"
 )
 
 // Config holds all configuration for the application
@@ -217,55 +220,61 @@ func (app *Application) initRedis() error {
 
 // Add this method to the Application struct
 func (app *Application) setupMiddleware(router *gin.Engine) {
-    // Recovery middleware recovers from any panics and writes a 500 if there was one
-    router.Use(gin.Recovery())
-    
-    // Custom logger middleware
-    router.Use(middleware.Logger())
-    
-    // Error handling (must be after logger)
-    router.Use(middleware.ErrorHandler())
-    
-    // Security headers
-    router.Use(middleware.SecurityHeaders())
-    
-    // CORS
-    router.Use(middleware.CORS())
+	// Recovery middleware recovers from any panics and writes a 500 if there was one
+	router.Use(gin.Recovery())
+
+	// Custom logger middleware
+	router.Use(middleware.Logger())
+
+	// Error handling (must be after logger)
+	router.Use(middleware.ErrorHandler())
+
+	// Security headers
+	router.Use(middleware.SecurityHeaders())
+
+	// CORS
+	router.Use(middleware.CORS())
 }
 
 // Update the setupRouter method to use middleware
 func (app *Application) setupRouter() *gin.Engine {
-    // Create router without default middleware
-    router := gin.New()
-    
-    // Setup middleware
-    app.setupMiddleware(router)
-    
-    // API v1 routes
-    v1 := router.Group("/api/v1")
-    {
-        // Public routes
-        v1.GET("/topics", app.getTopicsHandler)
-        v1.GET("/quizzes", app.getQuizzesHandler)
-        v1.GET("/quizzes/:slug", app.getQuizHandler)
-        v1.GET("/quizzes/:slug/questions", app.getQuizQuestionsHandler)
-        
-        // Quiz attempt routes
-        v1.POST("/quizzes/:slug/attempts", app.createAttemptHandler)
-        v1.PUT("/quizzes/:slug/attempts/:id", app.submitAttemptHandler)
-        v1.GET("/quizzes/:slug/attempts/:id", app.getAttemptHandler)
+	router := gin.New()
+	app.setupMiddleware(router)
 
-        // Admin routes (protected)
-        admin := v1.Group("/admin")
-        admin.Use(middleware.AdminAuth())  // Use our AdminAuth middleware
-        {
-            admin.POST("/quizzes", app.createQuizHandler)
-            admin.PUT("/quizzes/:id", app.updateQuizHandler)
-            admin.DELETE("/quizzes/:id", app.deleteQuizHandler)
-        }
-    }
+	// Initialize repositories and services
+	topicRepo := repository.NewTopicRepository(app.DB)
+	topicService := services.NewTopicService(topicRepo)
+	topicHandler := handlers.NewTopicHandler(topicService)
 
-    return router
+	// Health handler
+	healthHandler := handlers.NewHealthHandler(app.DB, app.Redis)
+	router.GET("/health", healthHandler.HealthCheck)
+
+	// API v1 routes
+	v1 := router.Group("/api/v1")
+	{
+		// Public routes
+		v1.GET("/topics", topicHandler.GetTopics) // <-- use integrated handler
+		v1.GET("/quizzes", app.getQuizzesHandler)
+		v1.GET("/quizzes/:slug", app.getQuizHandler)
+		v1.GET("/quizzes/:slug/questions", app.getQuizQuestionsHandler)
+
+		// Quiz attempt routes
+		v1.POST("/quizzes/:slug/attempts", app.createAttemptHandler)
+		v1.PUT("/quizzes/:slug/attempts/:id", app.submitAttemptHandler)
+		v1.GET("/quizzes/:slug/attempts/:id", app.getAttemptHandler)
+
+		// Admin routes (protected)
+		admin := v1.Group("/admin")
+		admin.Use(middleware.AdminAuth())
+		{
+			admin.POST("/quizzes", app.createQuizHandler)
+			admin.PUT("/quizzes/:id", app.updateQuizHandler)
+			admin.DELETE("/quizzes/:id", app.deleteQuizHandler)
+		}
+	}
+
+	return router
 }
 
 // startServer starts the HTTP server with graceful shutdown
@@ -280,7 +289,7 @@ func (app *Application) startServer() {
 		log.Printf("🚀 Server starting on port %s", app.Config.Port)
 		log.Printf("🌍 Environment: %s", app.Config.Environment)
 		log.Printf("📋 Health check: http://localhost:%s/health", app.Config.Port)
-		
+
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Failed to start server: %v", err)
 		}
