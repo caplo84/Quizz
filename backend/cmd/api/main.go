@@ -246,6 +246,10 @@ func (app *Application) setupRouter() *gin.Engine {
 	topicService := services.NewTopicService(topicRepo)
 	topicHandler := handlers.NewTopicHandler(topicService)
 
+	quizRepo := repository.NewQuizRepository(app.DB)
+	quizService := services.NewQuizService(quizRepo)
+	quizHandler := handlers.NewQuizHandler(quizService)
+
 	// Health handler
 	healthHandler := handlers.NewHealthHandler(app.DB, app.Redis)
 	router.GET("/health", healthHandler.HealthCheck)
@@ -254,10 +258,10 @@ func (app *Application) setupRouter() *gin.Engine {
 	v1 := router.Group("/api/v1")
 	{
 		// Public routes
-		v1.GET("/topics", topicHandler.GetTopics) // <-- use integrated handler
-		v1.GET("/quizzes", app.getQuizzesHandler)
-		v1.GET("/quizzes/:slug", app.getQuizHandler)
-		v1.GET("/quizzes/:slug/questions", app.getQuizQuestionsHandler)
+		v1.GET("/topics", topicHandler.GetTopics)
+		v1.GET("/quizzes", quizHandler.GetQuizzes)
+		v1.GET("/quizzes/:slug", quizHandler.GetQuizBySlug)
+		v1.GET("/quizzes/:slug/questions", quizHandler.GetQuizQuestions)
 
 		// Quiz attempt routes
 		v1.POST("/quizzes/:slug/attempts", app.createAttemptHandler)
@@ -368,58 +372,6 @@ func (app *Application) healthCheckHandler(c *gin.Context) {
 		},
 	})
 }
-
-// Placeholder handlers (to be moved to handlers package later)
-func (app *Application) getTopicsHandler(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"message": "Topics endpoint - to be implemented"})
-}
-
-func (app *Application) getQuizzesHandler(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"message": "Quizzes endpoint - to be implemented"})
-}
-
-func (app *Application) getQuizHandler(c *gin.Context) {
-	slug := c.Param("slug")
-	c.JSON(http.StatusOK, gin.H{"message": "Quiz detail endpoint - to be implemented", "slug": slug})
-}
-
-func (app *Application) getQuizQuestionsHandler(c *gin.Context) {
-	slug := c.Param("slug")
-	c.JSON(http.StatusOK, gin.H{"message": "Quiz questions endpoint - to be implemented", "slug": slug})
-}
-
-func (app *Application) createAttemptHandler(c *gin.Context) {
-	slug := c.Param("slug")
-	c.JSON(http.StatusOK, gin.H{"message": "Create attempt endpoint - to be implemented", "slug": slug})
-}
-
-func (app *Application) submitAttemptHandler(c *gin.Context) {
-	slug := c.Param("slug")
-	id := c.Param("id")
-	c.JSON(http.StatusOK, gin.H{"message": "Submit attempt endpoint - to be implemented", "slug": slug, "id": id})
-}
-
-func (app *Application) getAttemptHandler(c *gin.Context) {
-	slug := c.Param("slug")
-	id := c.Param("id")
-	c.JSON(http.StatusOK, gin.H{"message": "Get attempt endpoint - to be implemented", "slug": slug, "id": id})
-}
-
-func (app *Application) createQuizHandler(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"message": "Create quiz endpoint - to be implemented"})
-}
-
-func (app *Application) updateQuizHandler(c *gin.Context) {
-	id := c.Param("id")
-	c.JSON(http.StatusOK, gin.H{"message": "Update quiz endpoint - to be implemented", "id": id})
-}
-
-func (app *Application) deleteQuizHandler(c *gin.Context) {
-	id := c.Param("id")
-	c.JSON(http.StatusOK, gin.H{"message": "Delete quiz endpoint - to be implemented", "id": id})
-}
-
-// Utility functions
 
 // getEnv gets an environment variable with a fallback value
 func getEnv(key, fallback string) string {
