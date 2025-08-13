@@ -250,6 +250,10 @@ func (app *Application) setupRouter() *gin.Engine {
 	quizService := services.NewQuizService(quizRepo)
 	quizHandler := handlers.NewQuizHandler(quizService)
 
+	attemptRepo := repository.NewAttemptRepository(app.DB)
+	attemptService := services.NewAttemptService(attemptRepo)
+	attemptHandler := handlers.NewAttemptHandler(attemptService, quizService)
+
 	// Health handler
 	healthHandler := handlers.NewHealthHandler(app.DB, app.Redis)
 	router.GET("/health", healthHandler.HealthCheck)
@@ -264,17 +268,15 @@ func (app *Application) setupRouter() *gin.Engine {
 		v1.GET("/quizzes/:slug/questions", quizHandler.GetQuizQuestions)
 
 		// Quiz attempt routes
-		v1.POST("/quizzes/:slug/attempts", app.createAttemptHandler)
-		v1.PUT("/quizzes/:slug/attempts/:id", app.submitAttemptHandler)
-		v1.GET("/quizzes/:slug/attempts/:id", app.getAttemptHandler)
+		v1.POST("/quizzes/:slug/attempts", attemptHandler.CreateAttempt)
+		v1.PUT("/quizzes/:slug/attempts/:id", attemptHandler.SubmitAttempt)
+		v1.GET("/quizzes/:slug/attempts/:id", attemptHandler.GetAttempt)
 
 		// Admin routes (protected)
 		admin := v1.Group("/admin")
 		admin.Use(middleware.AdminAuth())
 		{
-			admin.POST("/quizzes", app.createQuizHandler)
-			admin.PUT("/quizzes/:id", app.updateQuizHandler)
-			admin.DELETE("/quizzes/:id", app.deleteQuizHandler)
+			// TODO: Implement admin handlers
 		}
 	}
 
