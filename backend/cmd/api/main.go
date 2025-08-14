@@ -253,7 +253,7 @@ func (app *Application) setupRouter() *gin.Engine {
 	attemptRepo := repository.NewAttemptRepository(app.DB)
 	attemptService := services.NewAttemptService(attemptRepo)
 	attemptHandler := handlers.NewAttemptHandler(attemptService, quizService)
-
+	adminService := services.NewAdminService(quizRepo)
 	// Health handler
 	healthHandler := handlers.NewHealthHandler(app.DB, app.Redis)
 	router.GET("/health", healthHandler.HealthCheck)
@@ -272,11 +272,14 @@ func (app *Application) setupRouter() *gin.Engine {
 		v1.PUT("/quizzes/:slug/attempts/:id", attemptHandler.SubmitAttempt)
 		v1.GET("/quizzes/:slug/attempts/:id", attemptHandler.GetAttempt)
 
-		// Admin routes (protected)
+		// In setupRouter() function, update the admin section:
 		admin := v1.Group("/admin")
 		admin.Use(middleware.AdminAuth())
 		{
-			// TODO: Implement admin handlers
+			adminHandler := handlers.NewAdminHandler(adminService)
+			admin.POST("/quizzes", adminHandler.CreateQuiz)
+			admin.PUT("/quizzes/:id", adminHandler.UpdateQuiz)
+			admin.DELETE("/quizzes/:id", adminHandler.DeleteQuiz)
 		}
 	}
 
