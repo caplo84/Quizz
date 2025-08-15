@@ -234,6 +234,13 @@ func (app *Application) setupMiddleware(router *gin.Engine) {
 
 	// CORS
 	router.Use(middleware.CORS())
+
+	// JSON validation
+	router.Use(middleware.ValidateJSON())
+
+	// Rate limiting
+	rateLimiter := middleware.NewRateLimiter(app.Redis, 10.0, 20) // 10 req/sec, burst 20
+	router.Use(rateLimiter.RateLimit())
 }
 
 // Update the setupRouter method to use middleware
