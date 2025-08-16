@@ -4,6 +4,7 @@ import (
     "net/http"
     "github.com/gin-gonic/gin"
     "github.com/caplo84/quizz-backend/internal/services"
+    "github.com/caplo84/quizz-backend/pkg/utils"
 )
 
 type TopicHandler struct {
@@ -20,5 +21,5 @@ func (h *TopicHandler) GetTopics(c *gin.Context) {
         c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
         return
     }
-    c.JSON(http.StatusOK, topics)
+    utils.SuccessResponse(c, http.StatusOK, topics)
 }

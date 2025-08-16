@@ -22,45 +22,12 @@ import (
 	"github.com/caplo84/quizz-backend/internal/middleware"
 	"github.com/caplo84/quizz-backend/internal/repository"
 	"github.com/caplo84/quizz-backend/internal/services"
+	"github.com/caplo84/quizz-backend/pkg/utils"
 )
-
-// Config holds all configuration for the application
-type Config struct {
-	Port        string
-	Environment string
-	Database    DatabaseConfig
-	Redis       RedisConfig
-	CORS        CORSConfig
-}
-
-// DatabaseConfig holds database configuration
-type DatabaseConfig struct {
-	Host     string
-	Port     string
-	User     string
-	Password string
-	DBName   string
-	SSLMode  string
-}
-
-// RedisConfig holds Redis configuration
-type RedisConfig struct {
-	Host     string
-	Port     string
-	Password string
-	DB       int
-}
-
-// CORSConfig holds CORS configuration
-type CORSConfig struct {
-	AllowedOrigins []string
-	AllowedMethods []string
-	AllowedHeaders []string
-}
 
 // Application holds the application dependencies
 type Application struct {
-	Config *Config
+	Config *utils.Config
 	DB     *gorm.DB
 	Redis  *redis.Client
 	Router *gin.Engine
@@ -72,8 +39,11 @@ func main() {
 		log.Println("No .env file found, using system environment variables")
 	}
 
-	// Load configuration
-	config := loadConfig()
+	// Load configuration using utility
+	config, err := utils.LoadConfig()
+	if err != nil {
+		log.Fatalf("Failed to load configuration: %v", err)
+	}
 
 	// Initialize application
 	app := &Application{
@@ -81,7 +51,7 @@ func main() {
 	}
 
 	// Set Gin mode based on environment
-	if config.Environment == "production" {
+	if config.Server.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
@@ -96,40 +66,10 @@ func main() {
 	}
 
 	// Setup routes
-	app.Router = app.setupRouter() // <-- assign router to app.Router
+	app.Router = app.setupRouter()
 
 	// Start server with graceful shutdown
 	app.startServer()
-}
-
-// loadConfig loads configuration from environment variables
-func loadConfig() *Config {
-	return &Config{
-		Port:        getEnv("PORT", "8080"),
-		Environment: getEnv("ENVIRONMENT", "development"),
-		Database: DatabaseConfig{
-			Host:     getEnv("DB_HOST", "localhost"),
-			Port:     getEnv("DB_PORT", "5432"),
-			User:     getEnv("DB_USER", "postgres"),
-			Password: getEnv("DB_PASSWORD", ""),
-			DBName:   getEnv("DB_NAME", "quizz_backend"),
-			SSLMode:  getEnv("DB_SSLMODE", "disable"),
-		},
-		Redis: RedisConfig{
-			Host:     getEnv("REDIS_HOST", "localhost"),
-			Port:     getEnv("REDIS_PORT", "6379"),
-			Password: getEnv("REDIS_PASSWORD", ""),
-			DB:       0, // Default Redis DB
-		},
-		CORS: CORSConfig{
-			AllowedOrigins: []string{
-				getEnv("FRONTEND_URL", "http://localhost:3000"),
-				"http://localhost:3001",
-			},
-			AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-			AllowedHeaders: []string{"Origin", "Content-Type", "Authorization"},
-		},
-	}
 }
 
 // initDatabase initializes the database connection
@@ -145,7 +85,7 @@ func (app *Application) initDatabase() error {
 
 	// Configure GORM logger
 	var gormLogger logger.Interface
-	if app.Config.Environment == "development" {
+	if app.Config.Server.Environment == "development" {
 		gormLogger = logger.Default.LogMode(logger.Info)
 	} else {
 		gormLogger = logger.Default.LogMode(logger.Error)
@@ -176,8 +116,7 @@ func (app *Application) initDatabase() error {
 	app.DB = db
 	log.Println("✅ Database connected successfully")
 
-	// Auto-migrate models (optional - you might prefer manual migrations)
-	if app.Config.Environment == "development" {
+	if app.Config.Server.Environment == "development" {
 		if err := app.autoMigrate(); err != nil {
 			log.Printf("⚠️  Auto-migration warning: %v", err)
 		}
@@ -296,15 +235,15 @@ func (app *Application) setupRouter() *gin.Engine {
 // startServer starts the HTTP server with graceful shutdown
 func (app *Application) startServer() {
 	server := &http.Server{
-		Addr:    ":" + app.Config.Port,
+		Addr:    ":" + app.Config.Server.Port,
 		Handler: app.Router,
 	}
 
 	// Start server in a goroutine
 	go func() {
-		log.Printf("🚀 Server starting on port %s", app.Config.Port)
-		log.Printf("🌍 Environment: %s", app.Config.Environment)
-		log.Printf("📋 Health check: http://localhost:%s/health", app.Config.Port)
+		log.Printf("🚀 Server starting on port %s", app.Config.Server.Port)
+		log.Printf("🌍 Environment: %s", app.Config.Server.Environment)
+		log.Printf("📋 Health check: http://localhost:%s/health", app.Config.Server.Port)
 
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Failed to start server: %v", err)
@@ -376,7 +315,7 @@ func (app *Application) healthCheckHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"status":      "healthy",
 		"timestamp":   time.Now().UTC(),
-		"environment": app.Config.Environment,
+		"environment": app.Config.Server.Environment,
 		"version":     "1.0.0",
 		"services": gin.H{
 			"database": "connected",
