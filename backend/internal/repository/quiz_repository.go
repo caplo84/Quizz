@@ -6,6 +6,7 @@ import (
     "gorm.io/gorm"
 )
 
+// Implementation struct
 type quizRepository struct {
     db *gorm.DB
 }
@@ -48,4 +49,21 @@ func (r *quizRepository) UpdateQuiz(ctx context.Context, quiz *models.Quiz) erro
 
 func (r *quizRepository) DeleteQuiz(ctx context.Context, id uint) error {
     return r.db.WithContext(ctx).Delete(&models.Quiz{}, id).Error
+}
+
+func (r *quizRepository) GetQuizByID(ctx context.Context, id uint) (*models.Quiz, error) {
+    var quiz models.Quiz
+    
+    err := r.db.WithContext(ctx).
+        Preload("Topic").
+        Preload("Questions").
+        Preload("Questions.Choices").
+        Where("id = ? AND is_active = ?", id, true).
+        First(&quiz).Error
+    
+    if err != nil {
+        return nil, err
+    }
+    
+    return &quiz, nil
 }

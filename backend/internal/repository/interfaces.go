@@ -18,6 +18,7 @@ type QuizRepository interface {
     CreateQuiz(ctx context.Context, quiz *models.Quiz) error
     UpdateQuiz(ctx context.Context, quiz *models.Quiz) error
     DeleteQuiz(ctx context.Context, id uint) error
+    GetQuizByID(ctx context.Context, id uint) (*models.Quiz, error)
 }
 
 type AttemptRepository interface {

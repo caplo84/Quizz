@@ -15,11 +15,13 @@ import (
 	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
+	gormLogger "gorm.io/gorm/logger"
 
+	"github.com/caplo84/quizz-backend/internal/cache"
 	"github.com/caplo84/quizz-backend/internal/handlers"
-	"github.com/caplo84/quizz-backend/internal/models"
+	appLogger "github.com/caplo84/quizz-backend/internal/logger"
 	"github.com/caplo84/quizz-backend/internal/middleware"
+	"github.com/caplo84/quizz-backend/internal/models"
 	"github.com/caplo84/quizz-backend/internal/repository"
 	"github.com/caplo84/quizz-backend/internal/services"
 	"github.com/caplo84/quizz-backend/pkg/utils"
@@ -30,6 +32,7 @@ type Application struct {
 	Config *utils.Config
 	DB     *gorm.DB
 	Redis  *redis.Client
+	Cache  cache.Cache
 	Router *gin.Engine
 }
 
@@ -45,25 +48,40 @@ func main() {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
 
+	// Initialize structured logging
+	if err := appLogger.InitializeLogger(config.Logging.Level, config.Logging.Format); err != nil {
+		log.Fatalf("Failed to initialize logger: %v", err)
+	}
+
+	appLogger.Log.WithFields(appLogger.Fields{
+		"version": "1.0.0",
+		"env":     config.Server.Environment,
+	}).Info("Starting Quiz Backend API")
+
+	// Set Gin mode based on log level
+	if config.Logging.Level == "debug" {
+		gin.SetMode(gin.DebugMode)
+	} else {
+		gin.SetMode(gin.ReleaseMode)
+	}
+
 	// Initialize application
 	app := &Application{
 		Config: config,
 	}
 
-	// Set Gin mode based on environment
-	if config.Server.Environment == "production" {
-		gin.SetMode(gin.ReleaseMode)
-	}
-
-	// Initialize database
+	// Initialize database with logging
 	if err := app.initDatabase(); err != nil {
-		log.Fatalf("Failed to initialize database: %v", err)
+		appLogger.Log.WithError(err).Fatal("Failed to initialize database")
 	}
 
 	// Initialize Redis
 	if err := app.initRedis(); err != nil {
 		log.Fatalf("Failed to initialize Redis: %v", err)
 	}
+
+	// Initialize cache
+	app.Cache = cache.NewRedisCache(app.Redis)
 
 	// Setup routes
 	app.Router = app.setupRouter()
@@ -84,15 +102,15 @@ func (app *Application) initDatabase() error {
 	)
 
 	// Configure GORM logger
-	var gormLogger logger.Interface
+	var gormLoggerInstance gormLogger.Interface
 	if app.Config.Server.Environment == "development" {
-		gormLogger = logger.Default.LogMode(logger.Info)
+		gormLoggerInstance = gormLogger.Default.LogMode(gormLogger.Info)
 	} else {
-		gormLogger = logger.Default.LogMode(logger.Error)
+		gormLoggerInstance = gormLogger.Default.LogMode(gormLogger.Error)
 	}
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
-		Logger: gormLogger,
+		Logger: gormLoggerInstance,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to connect to database: %w", err)
@@ -157,49 +175,34 @@ func (app *Application) initRedis() error {
 	return nil
 }
 
-// Add this method to the Application struct
-func (app *Application) setupMiddleware(router *gin.Engine) {
-	// Recovery middleware recovers from any panics and writes a 500 if there was one
-	router.Use(gin.Recovery())
-
-	// Custom logger middleware
-	router.Use(middleware.Logger())
-
-	// Error handling (must be after logger)
-	router.Use(middleware.ErrorHandler())
-
-	// Security headers
-	router.Use(middleware.SecurityHeaders())
-
-	// CORS
-	router.Use(middleware.CORS())
-
-	// JSON validation
-	router.Use(middleware.ValidateJSON())
-
-	// Rate limiting
-	rateLimiter := middleware.NewRateLimiter(app.Redis, 10.0, 20) // 10 req/sec, burst 20
-	router.Use(rateLimiter.RateLimit())
-}
-
-// Update the setupRouter method to use middleware
+// Update the setupRouter method to use middleware and services correctly
 func (app *Application) setupRouter() *gin.Engine {
 	router := gin.New()
-	app.setupMiddleware(router)
 
-	// Initialize repositories and services
+	// Add structured logging middleware
+	router.Use(middleware.RequestLoggingMiddleware())
+	router.Use(middleware.StructuredErrorMiddleware())
+	router.Use(middleware.SecurityLoggingMiddleware())
+	
+	// Add other middleware
+	router.Use(gin.Recovery())
+
+	// Initialize repositories and services with cache
 	topicRepo := repository.NewTopicRepository(app.DB)
-	topicService := services.NewTopicService(topicRepo)
+	topicService := services.NewTopicService(topicRepo, app.Cache)
 	topicHandler := handlers.NewTopicHandler(topicService)
 
 	quizRepo := repository.NewQuizRepository(app.DB)
-	quizService := services.NewQuizService(quizRepo)
+	quizService := services.NewQuizService(quizRepo, app.Cache)
 	quizHandler := handlers.NewQuizHandler(quizService)
 
 	attemptRepo := repository.NewAttemptRepository(app.DB)
-	attemptService := services.NewAttemptService(attemptRepo)
+	attemptService := services.NewAttemptService(attemptRepo, quizService, app.Cache)
 	attemptHandler := handlers.NewAttemptHandler(attemptService, quizService)
-	adminService := services.NewAdminService(quizRepo)
+	
+	adminService := services.NewAdminService(quizRepo, app.Cache)
+	adminHandler := handlers.NewAdminHandler(adminService)
+
 	// Health handler
 	healthHandler := handlers.NewHealthHandler(app.DB, app.Redis)
 	router.GET("/health", healthHandler.HealthCheck)
@@ -218,11 +221,9 @@ func (app *Application) setupRouter() *gin.Engine {
 		v1.PUT("/quizzes/:slug/attempts/:id", attemptHandler.SubmitAttempt)
 		v1.GET("/quizzes/:slug/attempts/:id", attemptHandler.GetAttempt)
 
-		// In setupRouter() function, update the admin section:
+		// Admin routes
 		admin := v1.Group("/admin")
-		admin.Use(middleware.AdminAuth())
 		{
-			adminHandler := handlers.NewAdminHandler(adminService)
 			admin.POST("/quizzes", adminHandler.CreateQuiz)
 			admin.PUT("/quizzes/:id", adminHandler.UpdateQuiz)
 			admin.DELETE("/quizzes/:id", adminHandler.DeleteQuiz)
@@ -241,12 +242,13 @@ func (app *Application) startServer() {
 
 	// Start server in a goroutine
 	go func() {
-		log.Printf("🚀 Server starting on port %s", app.Config.Server.Port)
-		log.Printf("🌍 Environment: %s", app.Config.Server.Environment)
-		log.Printf("📋 Health check: http://localhost:%s/health", app.Config.Server.Port)
+		appLogger.Log.WithFields(appLogger.Fields{
+			"port": app.Config.Server.Port,
+			"env":  app.Config.Server.Environment,
+		}).Info("Server starting")
 
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Failed to start server: %v", err)
+			appLogger.Log.WithError(err).Fatal("Server failed to start")
 		}
 	}()
 
@@ -255,14 +257,14 @@ func (app *Application) startServer() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	log.Println("🛑 Shutting down server...")
+	appLogger.Log.Info("Server shutting down...")
 
 	// Graceful shutdown with timeout
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	if err := server.Shutdown(ctx); err != nil {
-		log.Fatalf("Server forced to shutdown: %v", err)
+		appLogger.Log.WithError(err).Fatal("Server forced to shutdown")
 	}
 
 	// Close database connection
@@ -275,7 +277,7 @@ func (app *Application) startServer() {
 		app.Redis.Close()
 	}
 
-	log.Println("✅ Server exited gracefully")
+	appLogger.Log.Info("Server exited")
 }
 
 // Handler functions (placeholders - will be implemented in handlers package)
@@ -322,6 +324,22 @@ func (app *Application) healthCheckHandler(c *gin.Context) {
 			"redis":    "connected",
 		},
 	})
+}
+
+// Update service initialization
+func setupServices(db *gorm.DB, cache cache.Cache) (*services.Services, error) {
+	// Initialize repositories
+	topicRepo := repository.NewTopicRepository(db)
+	quizRepo := repository.NewQuizRepository(db)
+
+	// Initialize services with cache dependency
+	topicService := services.NewTopicService(topicRepo, cache)
+	quizService := services.NewQuizService(quizRepo, cache) // Pass cache here
+
+	return &services.Services{
+		TopicService: topicService,
+		QuizService:  quizService,
+	}, nil
 }
 
 // getEnv gets an environment variable with a fallback value

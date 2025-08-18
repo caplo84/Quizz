@@ -2,6 +2,7 @@ package services
 
 import (
     "context"
+    "github.com/caplo84/quizz-backend/internal/cache"
     "github.com/caplo84/quizz-backend/internal/models"
     "github.com/caplo84/quizz-backend/internal/repository"
 )
@@ -13,11 +14,17 @@ type AttemptService interface {
 }
 
 type attemptService struct {
-    repo repository.AttemptRepository
+    repo       repository.AttemptRepository
+    quizService QuizService
+    cache      cache.Cache
 }
 
-func NewAttemptService(repo repository.AttemptRepository) AttemptService {
-    return &attemptService{repo: repo}
+func NewAttemptService(repo repository.AttemptRepository, quizService QuizService, cache cache.Cache) AttemptService {
+    return &attemptService{
+        repo:       repo,
+        quizService: quizService,
+        cache:      cache,
+    }
 }
 
 func (s *attemptService) CreateAttempt(ctx context.Context, attempt *models.Attempt) error {

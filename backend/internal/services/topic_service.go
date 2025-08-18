@@ -2,6 +2,7 @@ package services
 
 import (
     "context"
+    "github.com/caplo84/quizz-backend/internal/cache"
     "github.com/caplo84/quizz-backend/internal/models"
     "github.com/caplo84/quizz-backend/internal/repository"
 )
@@ -13,11 +14,15 @@ type TopicService interface {
 }
 
 type topicService struct {
-    repo repository.TopicRepository
+    repo  repository.TopicRepository
+    cache cache.Cache
 }
 
-func NewTopicService(repo repository.TopicRepository) TopicService {
-    return &topicService{repo: repo}
+func NewTopicService(repo repository.TopicRepository, cache cache.Cache) TopicService {
+    return &topicService{
+        repo:  repo,
+        cache: cache,
+    }
 }
 
 func (s *topicService) GetAllTopics(ctx context.Context) ([]models.Topic, error) {

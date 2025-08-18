@@ -1,45 +1,41 @@
 package utils
 
 import (
-    "fmt"
     "os"
     "strconv"
     "strings"
 )
 
-// Config holds all application configuration
 type Config struct {
-    Server   ServerConfig
-    Database DatabaseConfig
-    Redis    RedisConfig
-    Security SecurityConfig
-    CORS     CORSConfig
+    Server   ServerConfig   `mapstructure:"server"`
+    Database DatabaseConfig `mapstructure:"database"`
+    Redis    RedisConfig    `mapstructure:"redis"`
+    Logging  LoggingConfig  `mapstructure:"logging"`
+    Security SecurityConfig `mapstructure:"security"`
+    CORS     CORSConfig     `mapstructure:"cors"`
 }
 
-// ServerConfig holds server-related configuration
 type ServerConfig struct {
-    Port        string
-    Environment string
-    GinMode     string
+    Port        string `mapstructure:"port" env:"PORT" default:"8080"`
+    Environment string `mapstructure:"environment" env:"ENVIRONMENT" default:"development"`
+    GinMode  string          `mapstructure:"gin_mode" env:"GIN_MODE" default:"debug"`
 }
 
-// DatabaseConfig holds database configuration
 type DatabaseConfig struct {
-    Host     string
-    Port     string
-    User     string
-    Password string
-    DBName   string
-    SSLMode  string
+    Host     string `mapstructure:"host" env:"DB_HOST" default:"localhost"`
+    Port     string `mapstructure:"port" env:"DB_PORT" default:"5432"`
+    User     string `mapstructure:"user" env:"DB_USER" default:"quiz_user"`
+    Password string `mapstructure:"password" env:"DB_PASSWORD"`
+    DBName   string `mapstructure:"dbname" env:"DB_NAME" default:"quiz_db"`
+    SSLMode  string `mapstructure:"sslmode" env:"DB_SSLMODE" default:"disable"`
 }
 
-// RedisConfig holds Redis configuration
 type RedisConfig struct {
-    URL      string
-    Host     string
-    Port     string
-    Password string
-    DB       int
+    Host     string `mapstructure:"host" env:"REDIS_HOST" default:"localhost"`
+    Port     string `mapstructure:"port" env:"REDIS_PORT" default:"6379"`
+    Password string `mapstructure:"password" env:"REDIS_PASSWORD"`
+    DB       int    `mapstructure:"db" env:"REDIS_DB" default:"0"`
+    URL string `mapstructure:"url" env:"REDIS_URL"`
 }
 
 // SecurityConfig holds security-related configuration
@@ -55,8 +51,16 @@ type CORSConfig struct {
     AllowedHeaders []string
 }
 
+type LoggingConfig struct {
+    Level  string `mapstructure:"level" env:"LOG_LEVEL" default:"info"`
+    Format string `mapstructure:"format" env:"LOG_FORMAT" default:"json"`
+    Output string `mapstructure:"output" env:"LOG_OUTPUT" default:"stdout"`
+}
+
 // LoadConfig loads configuration from environment variables
 func LoadConfig() (*Config, error) {
+    redisDB, _ := strconv.Atoi(getEnvOrDefault("REDIS_DB", "0"))
+    
     config := &Config{
         Server: ServerConfig{
             Port:        getEnvOrDefault("PORT", "8080"),
@@ -66,47 +70,35 @@ func LoadConfig() (*Config, error) {
         Database: DatabaseConfig{
             Host:     getEnvOrDefault("DB_HOST", "localhost"),
             Port:     getEnvOrDefault("DB_PORT", "5432"),
-            User:     getEnvOrDefault("DB_USER", "postgres"),
+            User:     getEnvOrDefault("DB_USER", "quiz_user"),
             Password: getEnvOrDefault("DB_PASSWORD", ""),
             DBName:   getEnvOrDefault("DB_NAME", "quiz_db"),
             SSLMode:  getEnvOrDefault("DB_SSLMODE", "disable"),
         },
         Redis: RedisConfig{
-            URL:      getEnvOrDefault("REDIS_URL", ""),
             Host:     getEnvOrDefault("REDIS_HOST", "localhost"),
             Port:     getEnvOrDefault("REDIS_PORT", "6379"),
             Password: getEnvOrDefault("REDIS_PASSWORD", ""),
-            DB:       getEnvAsInt("REDIS_DB", 0),
+            DB:       redisDB,
+            URL:      getEnvOrDefault("REDIS_URL", ""),
         },
         Security: SecurityConfig{
-            AdminAPIKey: os.Getenv("ADMIN_API_KEY"),
-            JWTSecret:   os.Getenv("JWT_SECRET"),
+            AdminAPIKey: getEnvOrDefault("ADMIN_API_KEY", "admin-key"),
+            JWTSecret:   getEnvOrDefault("JWT_SECRET", "jwt-secret"),
         },
         CORS: CORSConfig{
             AllowedOrigins: getEnvAsSlice("ALLOWED_ORIGINS", ",", []string{"http://localhost:3000"}),
             AllowedMethods: getEnvAsSlice("ALLOWED_METHODS", ",", []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
             AllowedHeaders: getEnvAsSlice("ALLOWED_HEADERS", ",", []string{"Origin", "Content-Type", "Authorization"}),
         },
-    }
-    
-    if err := validateConfig(config); err != nil {
-        return nil, fmt.Errorf("config validation failed: %w", err)
+        Logging: LoggingConfig{
+            Level:  getEnvOrDefault("LOG_LEVEL", "info"),
+            Format: getEnvOrDefault("LOG_FORMAT", "json"),
+            Output: getEnvOrDefault("LOG_OUTPUT", "stdout"),
+        },
     }
     
     return config, nil
-}
-
-// validateConfig validates the configuration
-func validateConfig(config *Config) error {
-    if config.Security.AdminAPIKey == "" {
-        return fmt.Errorf("ADMIN_API_KEY is required")
-    }
-    
-    if config.Database.Password == "" && config.Server.Environment == "production" {
-        return fmt.Errorf("DB_PASSWORD is required in production")
-    }
-    
-    return nil
 }
 
 // Helper functions
