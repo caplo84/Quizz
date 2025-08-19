@@ -8,6 +8,7 @@ import (
 
     "github.com/caplo84/quizz-backend/internal/cache"
     "github.com/caplo84/quizz-backend/internal/logger"
+    "github.com/caplo84/quizz-backend/internal/metrics"
     "github.com/caplo84/quizz-backend/internal/models"
     "github.com/caplo84/quizz-backend/internal/repository"
 )
@@ -15,6 +16,7 @@ import (
 type QuizService interface {
     GetQuizzesByTopic(ctx context.Context, topicID uint) ([]models.Quiz, error)
     GetQuizBySlug(ctx context.Context, slug string) (*models.Quiz, error)
+    GetQuizByID(ctx context.Context, id uint) (*models.Quiz, error)
     GetQuizQuestions(ctx context.Context, quizID uint) ([]models.Question, error)
     CreateQuiz(ctx context.Context, quiz *models.Quiz) error
     UpdateQuiz(ctx context.Context, quiz *models.Quiz) error
@@ -62,47 +64,49 @@ func (s *quizService) GetQuizzesByTopic(ctx context.Context, topicID uint) ([]mo
 
 func (s *quizService) GetQuizBySlug(ctx context.Context, slug string) (*models.Quiz, error) {
     start := time.Now()
-
-    logger.Log.WithContext(ctx).WithFields(logger.Fields{
-        "operation": "get_quiz_by_slug",
-        "slug":      slug,
-    }).Debug("Starting quiz retrieval")
-
-    // Try cache first
-    cacheKey := fmt.Sprintf("quiz:%s", slug)
-    if cachedQuiz, err := s.cache.Get(ctx, cacheKey); err == nil {
-        logger.Log.LogCacheOperation(ctx, "get", cacheKey, true, time.Since(start))
-
-        var quiz models.Quiz
-        if err := json.Unmarshal(cachedQuiz, &quiz); err == nil {
-            return &quiz, nil
-        }
+    
+    // Try cache first - fix the return value handling
+    if cached, err := s.getFromCache(slug); err == nil && cached != nil {
+        metrics.RecordCacheOperation("get", "hit")
+        return cached, nil
     }
-
-    // Cache miss, get from database
-    logger.Log.LogCacheOperation(ctx, "get", cacheKey, false, time.Since(start))
-
+    
+    metrics.RecordCacheOperation("get", "miss")
+    
+    // Database query
     quiz, err := s.repo.GetQuizBySlug(ctx, slug)
+    
+    // Record database performance
+    metrics.RecordDatabaseOperation("select", "quizzes", time.Since(start))
+    
+    return quiz, err
+}
+
+func (s *quizService) GetQuizByID(ctx context.Context, id uint) (*models.Quiz, error) {
+    start := time.Now()
+    
+    logger.Log.WithContext(ctx).WithFields(logger.Fields{
+        "operation": "get_quiz_by_id",
+        "quiz_id":   id,
+    }).Debug("Starting quiz retrieval by ID")
+    
+    quiz, err := s.repo.GetQuizByID(ctx, id)
     if err != nil {
         logger.Log.WithContext(ctx).WithError(err).WithFields(logger.Fields{
-            "operation": "get_quiz_by_slug",
-            "slug":      slug,
-        }).Error("Failed to retrieve quiz from database")
+            "operation": "get_quiz_by_id",
+            "quiz_id":   id,
+        }).Error("Failed to retrieve quiz by ID")
         return nil, err
     }
-
-    // Cache the result
-    if quizData, err := json.Marshal(quiz); err == nil {
-        s.cache.Set(ctx, cacheKey, quizData, 15*time.Minute)
-    }
-
+    
+    metrics.RecordDatabaseOperation("select", "quizzes", time.Since(start))
+    
     logger.Log.WithContext(ctx).WithFields(logger.Fields{
-        "operation":   "get_quiz_by_slug",
-        "slug":        slug,
-        "quiz_id":     quiz.ID,
+        "operation":   "get_quiz_by_id",
+        "quiz_id":     id,
         "duration_ms": time.Since(start).Milliseconds(),
-    }).Info("Quiz retrieved successfully")
-
+    }).Info("Quiz retrieved successfully by ID")
+    
     return quiz, nil
 }
 
@@ -225,4 +229,19 @@ func (s *quizService) DeleteQuiz(ctx context.Context, id uint) error {
     }).Info("Quiz deleted successfully")
     
     return nil
+}
+
+func (s *quizService) getFromCache(slug string) (*models.Quiz, error) {
+    cacheKey := fmt.Sprintf("quiz:%s", slug)
+    cachedQuiz, err := s.cache.Get(context.Background(), cacheKey)
+    if err != nil {
+        return nil, err
+    }
+
+    var quiz models.Quiz
+    if err := json.Unmarshal(cachedQuiz, &quiz); err != nil {
+        return nil, err
+    }
+
+    return &quiz, nil
 }

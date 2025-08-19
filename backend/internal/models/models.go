@@ -111,6 +111,8 @@ type Attempt struct {
 	TimeTakenSeconds   *int         `json:"time_taken_seconds,omitempty"`
 	Status             string       `json:"status" gorm:"size:20;default:in_progress;check:status IN ('in_progress','completed','abandoned')" validate:"oneof=in_progress completed abandoned"`
 	Answers            UserAnswers  `json:"answers" gorm:"type:jsonb"`
+	Score              int          `json:"score" gorm:"default:0"`        // Add this for compatibility
+	IsCompleted        bool         `json:"is_completed" gorm:"default:false"` // Add this field
 	CreatedAt          time.Time    `json:"created_at"`
 	UpdatedAt          time.Time    `json:"updated_at"`
 
@@ -284,11 +286,6 @@ func (Attempt) TableName() string {
 }
 
 // Helper methods
-
-// IsCompleted checks if an attempt is completed
-func (a *Attempt) IsCompleted() bool {
-	return a.Status == "completed" && a.CompletedAt != nil
-}
 
 // CalculatePercentage calculates the percentage score
 func (a *Attempt) CalculatePercentage() float64 {

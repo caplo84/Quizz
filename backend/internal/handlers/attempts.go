@@ -3,9 +3,11 @@ package handlers
 import (
     "net/http"
     "strconv"
+    "time"
     "github.com/gin-gonic/gin"
     "github.com/caplo84/quizz-backend/internal/services"
     "github.com/caplo84/quizz-backend/internal/models"
+    "github.com/caplo84/quizz-backend/internal/metrics"  // Add this import
 )
 
 type AttemptHandler struct {
@@ -43,6 +45,9 @@ func (h *AttemptHandler) CreateAttempt(c *gin.Context) {
         return
     }
     
+    // Record metrics for quiz attempt creation
+    metrics.RecordQuizAttempt(quiz.Topic.Name, false, 0) // false = not completed yet
+    
     c.JSON(http.StatusCreated, gin.H{
         "data": attempt,
     })
@@ -77,7 +82,6 @@ func (h *AttemptHandler) SubmitAttempt(c *gin.Context) {
         return
     }
     
-    // Use a simple struct instead of models.Answer
     var requestBody struct {
         Answers models.UserAnswers `json:"answers"`
     }
@@ -89,8 +93,11 @@ func (h *AttemptHandler) SubmitAttempt(c *gin.Context) {
         return
     }
     
-    // Update attempt with answers as string or JSON
+    // Update attempt with answers and mark as completed
     attempt.Answers = requestBody.Answers
+    attempt.IsCompleted = true
+    now := time.Now()
+    attempt.CompletedAt = &now
     
     if err := h.attemptService.UpdateAttemptAnswers(c.Request.Context(), attempt); err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{

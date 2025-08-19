@@ -16,14 +16,15 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	gormLogger "gorm.io/gorm/logger"
+	appLogger "github.com/caplo84/quizz-backend/internal/logger"
 
 	"github.com/caplo84/quizz-backend/internal/cache"
 	"github.com/caplo84/quizz-backend/internal/handlers"
-	appLogger "github.com/caplo84/quizz-backend/internal/logger"
 	"github.com/caplo84/quizz-backend/internal/middleware"
 	"github.com/caplo84/quizz-backend/internal/models"
 	"github.com/caplo84/quizz-backend/internal/repository"
 	"github.com/caplo84/quizz-backend/internal/services"
+	"github.com/caplo84/quizz-backend/internal/metrics"
 	"github.com/caplo84/quizz-backend/pkg/utils"
 )
 
@@ -48,22 +49,18 @@ func main() {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
 
-	// Initialize structured logging
+	// Initialize structured logging based on config
 	if err := appLogger.InitializeLogger(config.Logging.Level, config.Logging.Format); err != nil {
 		log.Fatalf("Failed to initialize logger: %v", err)
 	}
 
 	appLogger.Log.WithFields(appLogger.Fields{
-		"version": "1.0.0",
-		"env":     config.Server.Environment,
+		"environment": config.Server.Environment,
+		"version":     "1.0.0",
 	}).Info("Starting Quiz Backend API")
 
-	// Set Gin mode based on log level
-	if config.Logging.Level == "debug" {
-		gin.SetMode(gin.DebugMode)
-	} else {
-		gin.SetMode(gin.ReleaseMode)
-	}
+	// Set Gin mode based on config
+	gin.SetMode(config.Server.GinMode)
 
 	// Initialize application
 	app := &Application{
@@ -179,13 +176,24 @@ func (app *Application) initRedis() error {
 func (app *Application) setupRouter() *gin.Engine {
 	router := gin.New()
 
-	// Add structured logging middleware
-	router.Use(middleware.RequestLoggingMiddleware())
-	router.Use(middleware.StructuredErrorMiddleware())
-	router.Use(middleware.SecurityLoggingMiddleware())
+	// Add Prometheus middleware
+	router.Use(metrics.PrometheusMiddleware())
 	
 	// Add other middleware
+	router.Use(middleware.RequestLoggingMiddleware())
 	router.Use(gin.Recovery())
+
+	// Health check endpoints
+	health := router.Group("/health")
+	{
+		healthHandler := handlers.NewHealthHandler(app.DB, app.Redis)
+		health.GET("/", healthHandler.HealthCheck)
+		health.GET("/live", healthHandler.LivenessProbe)
+		health.GET("/ready", healthHandler.ReadinessProbe)
+	}
+
+	// Prometheus metrics endpoint
+	router.GET("/metrics", metrics.MetricsHandler())
 
 	// Initialize repositories and services with cache
 	topicRepo := repository.NewTopicRepository(app.DB)
@@ -202,10 +210,6 @@ func (app *Application) setupRouter() *gin.Engine {
 	
 	adminService := services.NewAdminService(quizRepo, app.Cache)
 	adminHandler := handlers.NewAdminHandler(adminService)
-
-	// Health handler
-	healthHandler := handlers.NewHealthHandler(app.DB, app.Redis)
-	router.GET("/health", healthHandler.HealthCheck)
 
 	// API v1 routes
 	v1 := router.Group("/api/v1")
