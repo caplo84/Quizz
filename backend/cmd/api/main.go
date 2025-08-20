@@ -176,6 +176,9 @@ func (app *Application) initRedis() error {
 func (app *Application) setupRouter() *gin.Engine {
 	router := gin.New()
 
+	// Add CORS middleware
+	router.Use(middleware.CORS())
+	
 	// Add Prometheus middleware
 	router.Use(metrics.PrometheusMiddleware())
 	
