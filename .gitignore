@@ -36,6 +36,7 @@ npm-debug.log*
 .env.local
 .env.production
 .env.development
+.env.staging
 
 # === IDEs ===
 .vscode/
@@ -55,3 +56,8 @@ Thumbs.db
 # === Railway / Local builds ===
 railway.json
 /tmp/
+
+
+# === dev ===
+*.md
+*.test

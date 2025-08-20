@@ -1,0 +1,58 @@
+server:
+  port: "8080"
+  environment: "staging"
+  gin_mode: "release"
+  read_timeout: "30s"
+  write_timeout: "30s"
+
+database:
+  host: "${DB_HOST}"
+  port: "${DB_PORT}"
+  user: "${DB_USER}"
+  password: "${DB_PASSWORD}"
+  dbname: "${DB_NAME}"
+  sslmode: "require"
+  max_idle_conns: 15
+  max_open_conns: 50
+  conn_max_lifetime: "2h"
+
+redis:
+  host: "${REDIS_HOST}"
+  port: "${REDIS_PORT}"
+  password: "${REDIS_PASSWORD}"
+  db: 0
+  pool_size: 20
+  min_idle_conns: 10
+
+logging:
+  level: "info"
+  format: "json"
+  output: "stdout"
+
+security:
+  admin_api_key: "${ADMIN_API_KEY}"
+  jwt_secret: "${JWT_SECRET}"
+  rate_limit_rps: 50
+
+cors:
+  allowed_origins:
+    - "${FRONTEND_URL}"
+  allowed_methods:
+    - "GET"
+    - "POST"
+    - "PUT"
+    - "DELETE"
+    - "OPTIONS"
+  allowed_headers:
+    - "Content-Type"
+    - "Authorization"
+    - "X-Request-ID"
+
+cache:
+  ttl_seconds: 600
+  cleanup_interval: "15m"
+
+features:
+  enable_metrics: true
+  enable_debug_routes: false
+  enable_profiling: false
