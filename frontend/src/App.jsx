@@ -5,6 +5,7 @@ import { loader as homeLoader } from "./ui/Header";
 import Quiz from "./features/quiz/Quiz";
 import Error from "./ui/Error";
 import FinishedScreen from "./ui/FinishedScreen";
+import ConnectionStatus from "./ui/ConnectionStatus";
 
 function App() {
   const router = createBrowserRouter([
@@ -30,7 +31,12 @@ function App() {
     },
   ]);
 
-  return <RouterProvider router={router} />;
+  return (
+    <>
+      <RouterProvider router={router} />
+      <ConnectionStatus />
+    </>
+  );
 }
 
 export default App;

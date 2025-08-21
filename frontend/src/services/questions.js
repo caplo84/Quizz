@@ -1,7 +1,20 @@
-export async function getQuiz() {
-  const res = await fetch("/data.json");
-  if (!res.ok) throw Error("Failed in getting quiz");
+import { api, getQuiz as getQuizLegacy } from './api.js';
 
-  const data = await res.json();
-  return data?.quizzes;
+// Export the legacy function for backward compatibility
+export async function getQuiz() {
+  return getQuizLegacy();
 }
+
+// Export the new API functions
+export const {
+  getTopics,
+  getQuizzes,
+  getQuiz: getQuizBySlug,
+  getQuizQuestions,
+  createAttempt,
+  submitAttempt,
+  getAttemptResults,
+  healthCheck,
+} = api;
+
+export default api;
