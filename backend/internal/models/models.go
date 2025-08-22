@@ -9,8 +9,8 @@ import (
 // Topic represents a quiz topic/category
 type Topic struct {
 	ID          uint      `json:"id" gorm:"primaryKey"`
-	Name        string    `json:"name" gorm:"size:100;not null;uniqueIndex" validate:"required,min=2,max=100"`
-	Slug        string    `json:"slug" gorm:"size:100;not null;uniqueIndex" validate:"required,min=2,max=100"`
+	Name        string    `json:"name" gorm:"size:100;not null;uniqueIndex:idx_topics_name" validate:"required,min=2,max=100"`
+	Slug        string    `json:"slug" gorm:"size:100;not null;uniqueIndex:idx_topics_slug" validate:"required,min=2,max=100"`
 	Description *string   `json:"description,omitempty" gorm:"type:text"`
 	IconURL     *string   `json:"icon_url,omitempty" gorm:"size:255"`
 	IsActive    bool      `json:"is_active" gorm:"default:true"`

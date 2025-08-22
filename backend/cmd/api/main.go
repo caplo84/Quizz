@@ -142,13 +142,34 @@ func (app *Application) initDatabase() error {
 
 // autoMigrate runs GORM auto-migration for development
 func (app *Application) autoMigrate() error {
-	return app.DB.AutoMigrate(
-		&models.Topic{},
-		&models.Quiz{},
-		&models.Question{},
-		&models.Choice{},
-		&models.Attempt{},
-	)
+    // Only run in development environment
+    if app.Config.Server.Environment != "development" {
+        appLogger.Log.Info("Skipping auto-migration in non-development environment")
+        return nil
+    }
+
+    appLogger.Log.Info("Running GORM auto-migration for development")
+
+    // Use silent mode to reduce noise while keeping error reporting
+    migrationDB := app.DB.Session(&gorm.Session{
+        Logger: gormLogger.Default.LogMode(gormLogger.Silent),
+    })
+
+    // Migrate all models - GORM handles dependencies automatically
+    err := migrationDB.AutoMigrate(
+        &models.Topic{},
+        &models.Quiz{},
+        &models.Question{},
+        &models.Choice{},
+        &models.Attempt{},
+    )
+
+    if err != nil {
+        return fmt.Errorf("auto-migration failed: %w", err)
+    }
+
+    appLogger.Log.Info("✅ Auto-migration completed successfully")
+    return nil
 }
 
 // initRedis initializes the Redis connection
@@ -190,6 +211,7 @@ func (app *Application) setupRouter() *gin.Engine {
 	health := router.Group("/health")
 	{
 		healthHandler := handlers.NewHealthHandler(app.DB, app.Redis)
+		health.GET("", healthHandler.HealthCheck)
 		health.GET("/", healthHandler.HealthCheck)
 		health.GET("/live", healthHandler.LivenessProbe)
 		health.GET("/ready", healthHandler.ReadinessProbe)
