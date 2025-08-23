@@ -14,6 +14,10 @@ function Home() {
     dispatch(setQuizzes(data));
   }, [dispatch, data]);
 
+  // Add debugging to see what data looks like
+  console.log("Data received in Home:", data);
+  console.log("Is data an array?", Array.isArray(data));
+
   return (
     <div className="desktop:grid-cols-1 desktop:gap-24 mobile:gap-16 grid grid-cols-2">
       <div>
@@ -35,10 +39,17 @@ function Home() {
       </div>
       <div>
         <ul className="mobile:space-y-5 space-y-8">
-          {data &&
+          {data && Array.isArray(data) ? (
             data.map((item) => (
               <HomeItem key={item.title} img={item.icon} text={item.title} />
-            ))}
+            ))
+          ) : (
+            <li className="text-center py-8">
+              <p className={darkMode ? "text-white" : "text-dark-navy"}>
+                Loading quizzes or no data available...
+              </p>
+            </li>
+          )}
         </ul>
       </div>
     </div>
@@ -48,7 +59,12 @@ function Home() {
 export default Home;
 
 export async function loader() {
-  const data = await getQuiz();
-
-  return data;
+  try {
+    const data = await getQuiz();
+    console.log("Loader data:", data);
+    return data;
+  } catch (error) {
+    console.error("Error loading quiz data:", error);
+    return []; // Return empty array as fallback
+  }
 }

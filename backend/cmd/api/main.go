@@ -195,74 +195,77 @@ func (app *Application) initRedis() error {
 
 // Update the setupRouter method to use middleware and services correctly
 func (app *Application) setupRouter() *gin.Engine {
-	router := gin.New()
+    router := gin.New()
 
-	// Add CORS middleware
-	router.Use(middleware.CORS())
-	
-	// Add Prometheus middleware
-	router.Use(metrics.PrometheusMiddleware())
-	
-	// Add other middleware
-	router.Use(middleware.RequestLoggingMiddleware())
-	router.Use(gin.Recovery())
+    // Add CORS middleware
+    router.Use(middleware.CORS())
+    
+    // Add Prometheus middleware
+    router.Use(metrics.PrometheusMiddleware())
+    
+    // Add other middleware
+    router.Use(middleware.RequestLoggingMiddleware())
+    router.Use(gin.Recovery())
 
-	// Health check endpoints
-	health := router.Group("/health")
-	{
-		healthHandler := handlers.NewHealthHandler(app.DB, app.Redis)
-		health.GET("", healthHandler.HealthCheck)
-		health.GET("/", healthHandler.HealthCheck)
-		health.GET("/live", healthHandler.LivenessProbe)
-		health.GET("/ready", healthHandler.ReadinessProbe)
-	}
+    // Initialize handlers
+    healthHandler := handlers.NewHealthHandler(app.DB, app.Redis)
 
-	// Prometheus metrics endpoint
-	router.GET("/metrics", metrics.MetricsHandler())
+    // Health check endpoints - REMOVE the conflicting route
+    health := router.Group("/health")
+    {
+        // COMMENT OUT OR REMOVE this line to avoid conflict:
+        // health.GET("/", healthHandler.HealthCheck)
+        health.GET("/live", healthHandler.LivenessProbe)
+        health.GET("/ready", healthHandler.ReadinessProbe)
+    }
 
-	// Initialize repositories and services with cache
-	topicRepo := repository.NewTopicRepository(app.DB)
-	topicService := services.NewTopicService(topicRepo, app.Cache)
-	topicHandler := handlers.NewTopicHandler(topicService)
+    // Prometheus metrics endpoint
+    router.GET("/metrics", metrics.MetricsHandler())
 
-	quizRepo := repository.NewQuizRepository(app.DB)
-	quizService := services.NewQuizService(quizRepo, app.Cache)
-	quizHandler := handlers.NewQuizHandler(quizService)
+    // Initialize repositories and services with cache
+    topicRepo := repository.NewTopicRepository(app.DB)
+    topicService := services.NewTopicService(topicRepo, app.Cache)
+    topicHandler := handlers.NewTopicHandler(topicService)
+    
+    quizRepo := repository.NewQuizRepository(app.DB)
+    quizService := services.NewQuizService(quizRepo, app.Cache)
+    quizHandler := handlers.NewQuizHandler(quizService)
 
-	attemptRepo := repository.NewAttemptRepository(app.DB)
-	attemptService := services.NewAttemptService(attemptRepo, quizService, app.Cache)
-	attemptHandler := handlers.NewAttemptHandler(attemptService, quizService)
-	
-	adminService := services.NewAdminService(quizRepo, app.Cache)
-	adminHandler := handlers.NewAdminHandler(adminService)
+    attemptRepo := repository.NewAttemptRepository(app.DB)
+    attemptService := services.NewAttemptService(attemptRepo, quizService, app.Cache)
+    attemptHandler := handlers.NewAttemptHandler(attemptService, quizService)
+    
+    adminService := services.NewAdminService(quizRepo, app.Cache)
+    adminHandler := handlers.NewAdminHandler(adminService)
 
-	// API v1 routes
-	v1 := router.Group("/api/v1")
-	{
-		// Public routes
-		v1.GET("/topics", topicHandler.GetTopics)
-		v1.GET("/quizzes", quizHandler.GetQuizzes)
-		v1.GET("/quizzes/:slug", quizHandler.GetQuizBySlug)
-		v1.GET("/quizzes/:slug/questions", quizHandler.GetQuizQuestions)
+    // API v1 routes
+    v1 := router.Group("/api/v1")
+    {
+        v1.GET("/health", healthHandler.HealthCheck)
+        v1.GET("/topics", topicHandler.GetTopics)
+        
+        v1.GET("/topics/:topic/quizzes", quizHandler.GetQuizzes)
+        v1.GET("/quizzes/:slug", quizHandler.GetQuizBySlug)
+        v1.GET("/quizzes/:slug/questions", quizHandler.GetQuizQuestions) 
 
-		// Quiz attempt routes
-		v1.POST("/quizzes/:slug/attempts", attemptHandler.CreateAttempt)
-		v1.PUT("/quizzes/:slug/attempts/:id", attemptHandler.SubmitAttempt)
-		v1.GET("/quizzes/:slug/attempts/:id", attemptHandler.GetAttempt)
+        v1.POST("/quizzes/:slug/attempts", attemptHandler.CreateAttempt)
+        v1.PUT("/quizzes/:slug/attempts/:id", attemptHandler.SubmitAttempt)
+        v1.GET("/quizzes/:slug/attempts/:id", attemptHandler.GetAttempt)
 
-		// Admin routes
-		admin := v1.Group("/admin")
-		{
-			admin.POST("/quizzes", adminHandler.CreateQuiz)
-			admin.PUT("/quizzes/:id", adminHandler.UpdateQuiz)
-			admin.DELETE("/quizzes/:id", adminHandler.DeleteQuiz)
-		}
-	}
+        // Admin routes
+        admin := v1.Group("/admin")
+        {
+            admin.POST("/quizzes", adminHandler.CreateQuiz)
+            admin.PUT("/quizzes/:id", adminHandler.UpdateQuiz)
+            admin.DELETE("/quizzes/:id", adminHandler.DeleteQuiz)
+        }
+    }
 
-	return router
+    router.GET("/health", healthHandler.HealthCheck)
+
+    return router
 }
 
-// startServer starts the HTTP server with graceful shutdown
 func (app *Application) startServer() {
 	server := &http.Server{
 		Addr:    ":" + app.Config.Server.Port,
