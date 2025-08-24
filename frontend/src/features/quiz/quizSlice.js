@@ -1,4 +1,26 @@
-import { createSlice } from "@reduxjs/toolkit";
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import { topicsApi, quizzesApi } from "../../services/api.js";
+
+export const fetchTopics = createAsyncThunk(
+  "quiz/fetchTopics",
+  async () => {
+    return await topicsApi.getAll();
+  }
+);
+
+export const fetchQuizzesByTopic = createAsyncThunk(
+  "quiz/fetchQuizzesByTopic",
+  async (topic) => {
+    return await topicsApi.getQuizzes(topic);
+  }
+);
+
+export const fetchQuizBySlug = createAsyncThunk(
+  "quiz/fetchQuizBySlug",
+  async (slug) => {
+    return await quizzesApi.getBySlug(slug);
+  }
+);
 
 const initialState = {
   index: 0,

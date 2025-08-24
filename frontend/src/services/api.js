@@ -90,4 +90,7 @@ export async function getQuiz() {
   }
 }
 
-export default api;
+export { topicsApi } from './topicsApi.js';
+export { quizzesApi } from './quizzesApi.js';
+export { healthApi } from './healthApi.js';
+export { default as apiClient } from './apiClient.js';
