@@ -1,7 +1,7 @@
 import { RouterProvider, createBrowserRouter } from "react-router-dom";
 import AppLayout from "./ui/AppLayout";
 import Home from "./features/home/Home";
-import { loader as homeLoader } from "./ui/Header";
+import { homeLoader } from "./loaders/homeLoader";
 import Quiz from "./features/quiz/Quiz";
 import Error from "./ui/Error";
 import FinishedScreen from "./ui/FinishedScreen";

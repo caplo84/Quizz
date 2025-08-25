@@ -1,5 +1,4 @@
 import { useSelector } from "react-redux";
-import { getQuiz } from "../services/questions";
 import ToggleMode from "./ToggleMode";
 
 function Header() {
@@ -44,8 +43,3 @@ function Header() {
 
 export default Header;
 
-export async function loader() {
-  const data = await getQuiz();
-
-  return data;
-}

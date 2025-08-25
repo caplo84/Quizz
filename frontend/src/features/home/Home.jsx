@@ -1,5 +1,4 @@
 import { useLoaderData } from "react-router-dom";
-import { getQuiz } from "../../services/questions";
 import HomeItem from "./HomeItem";
 import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -57,14 +56,3 @@ function Home() {
 }
 
 export default Home;
-
-export async function loader() {
-  try {
-    const data = await getQuiz();
-    console.log("Loader data:", data);
-    return data;
-  } catch (error) {
-    console.error("Error loading quiz data:", error);
-    return []; // Return empty array as fallback
-  }
-}
