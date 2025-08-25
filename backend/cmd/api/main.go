@@ -10,21 +10,21 @@ import (
 	"syscall"
 	"time"
 
+	appLogger "github.com/caplo84/quizz-backend/internal/logger"
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
 	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	gormLogger "gorm.io/gorm/logger"
-	appLogger "github.com/caplo84/quizz-backend/internal/logger"
 
 	"github.com/caplo84/quizz-backend/internal/cache"
 	"github.com/caplo84/quizz-backend/internal/handlers"
+	"github.com/caplo84/quizz-backend/internal/metrics"
 	"github.com/caplo84/quizz-backend/internal/middleware"
 	"github.com/caplo84/quizz-backend/internal/models"
 	"github.com/caplo84/quizz-backend/internal/repository"
 	"github.com/caplo84/quizz-backend/internal/services"
-	"github.com/caplo84/quizz-backend/internal/metrics"
 	"github.com/caplo84/quizz-backend/pkg/utils"
 )
 
@@ -142,34 +142,34 @@ func (app *Application) initDatabase() error {
 
 // autoMigrate runs GORM auto-migration for development
 func (app *Application) autoMigrate() error {
-    // Only run in development environment
-    if app.Config.Server.Environment != "development" {
-        appLogger.Log.Info("Skipping auto-migration in non-development environment")
-        return nil
-    }
+	// Only run in development environment
+	if app.Config.Server.Environment != "development" {
+		appLogger.Log.Info("Skipping auto-migration in non-development environment")
+		return nil
+	}
 
-    appLogger.Log.Info("Running GORM auto-migration for development")
+	appLogger.Log.Info("Running GORM auto-migration for development")
 
-    // Use silent mode to reduce noise while keeping error reporting
-    migrationDB := app.DB.Session(&gorm.Session{
-        Logger: gormLogger.Default.LogMode(gormLogger.Silent),
-    })
+	// Use silent mode to reduce noise while keeping error reporting
+	migrationDB := app.DB.Session(&gorm.Session{
+		Logger: gormLogger.Default.LogMode(gormLogger.Silent),
+	})
 
-    // Migrate all models - GORM handles dependencies automatically
-    err := migrationDB.AutoMigrate(
-        &models.Topic{},
-        &models.Quiz{},
-        &models.Question{},
-        &models.Choice{},
-        &models.Attempt{},
-    )
+	// Migrate all models - GORM handles dependencies automatically
+	err := migrationDB.AutoMigrate(
+		&models.Topic{},
+		&models.Quiz{},
+		&models.Question{},
+		&models.Choice{},
+		&models.Attempt{},
+	)
 
-    if err != nil {
-        return fmt.Errorf("auto-migration failed: %w", err)
-    }
+	if err != nil {
+		return fmt.Errorf("auto-migration failed: %w", err)
+	}
 
-    appLogger.Log.Info("✅ Auto-migration completed successfully")
-    return nil
+	appLogger.Log.Info("✅ Auto-migration completed successfully")
+	return nil
 }
 
 // initRedis initializes the Redis connection
@@ -195,75 +195,75 @@ func (app *Application) initRedis() error {
 
 // Update the setupRouter method to use middleware and services correctly
 func (app *Application) setupRouter() *gin.Engine {
-    router := gin.New()
+	router := gin.New()
 
-    // Add CORS middleware
-    router.Use(middleware.CORS())
-    
-    // Add Prometheus middleware
-    router.Use(metrics.PrometheusMiddleware())
-    
-    // Add other middleware
-    router.Use(middleware.RequestLoggingMiddleware())
-    router.Use(gin.Recovery())
+	// Add CORS middleware
+	router.Use(middleware.CORS())
 
-    // Initialize handlers
-    healthHandler := handlers.NewHealthHandler(app.DB, app.Redis)
+	// Add Prometheus middleware
+	router.Use(metrics.PrometheusMiddleware())
 
-    // Health check endpoints - REMOVE the conflicting route
-    health := router.Group("/health")
-    {
-        // COMMENT OUT OR REMOVE this line to avoid conflict:
-        // health.GET("/", healthHandler.HealthCheck)
-        health.GET("/live", healthHandler.LivenessProbe)
-        health.GET("/ready", healthHandler.ReadinessProbe)
-    }
+	// Add other middleware
+	router.Use(middleware.RequestLoggingMiddleware())
+	router.Use(gin.Recovery())
 
-    // Prometheus metrics endpoint
-    router.GET("/metrics", metrics.MetricsHandler())
+	// Initialize handlers
+	healthHandler := handlers.NewHealthHandler(app.DB, app.Redis)
 
-    // Initialize repositories and services with cache
-    topicRepo := repository.NewTopicRepository(app.DB)
-    topicService := services.NewTopicService(topicRepo, app.Cache)
-    topicHandler := handlers.NewTopicHandler(topicService)
-    
-    quizRepo := repository.NewQuizRepository(app.DB)
-    quizService := services.NewQuizService(quizRepo, app.Cache)
-    quizHandler := handlers.NewQuizHandler(quizService)
+	// Health check endpoints - REMOVE the conflicting route
+	health := router.Group("/health")
+	{
+		// COMMENT OUT OR REMOVE this line to avoid conflict:
+		// health.GET("/", healthHandler.HealthCheck)
+		health.GET("/live", healthHandler.LivenessProbe)
+		health.GET("/ready", healthHandler.ReadinessProbe)
+	}
 
-    attemptRepo := repository.NewAttemptRepository(app.DB)
-    attemptService := services.NewAttemptService(attemptRepo, quizService, app.Cache)
-    attemptHandler := handlers.NewAttemptHandler(attemptService, quizService)
-    
-    adminService := services.NewAdminService(quizRepo, app.Cache)
-    adminHandler := handlers.NewAdminHandler(adminService)
+	// Prometheus metrics endpoint
+	router.GET("/metrics", metrics.MetricsHandler())
 
-    // API v1 routes
-    v1 := router.Group("/api/v1")
-    {
-        v1.GET("/health", healthHandler.HealthCheck)
-        v1.GET("/topics", topicHandler.GetTopics)
-        
-        v1.GET("/topics/:topic/quizzes", quizHandler.GetQuizzes)
-        v1.GET("/quizzes/:slug", quizHandler.GetQuizBySlug)
-        v1.GET("/quizzes/:slug/questions", quizHandler.GetQuizQuestions) 
+	// Initialize repositories and services with cache
+	topicRepo := repository.NewTopicRepository(app.DB)
+	topicService := services.NewTopicService(topicRepo, app.Cache)
+	topicHandler := handlers.NewTopicHandler(topicService)
 
-        v1.POST("/quizzes/:slug/attempts", attemptHandler.CreateAttempt)
-        v1.PUT("/quizzes/:slug/attempts/:id", attemptHandler.SubmitAttempt)
-        v1.GET("/quizzes/:slug/attempts/:id", attemptHandler.GetAttempt)
+	quizRepo := repository.NewQuizRepository(app.DB)
+	quizService := services.NewQuizService(quizRepo, app.Cache)
+	quizHandler := handlers.NewQuizHandler(quizService)
 
-        // Admin routes
-        admin := v1.Group("/admin")
-        {
-            admin.POST("/quizzes", adminHandler.CreateQuiz)
-            admin.PUT("/quizzes/:id", adminHandler.UpdateQuiz)
-            admin.DELETE("/quizzes/:id", adminHandler.DeleteQuiz)
-        }
-    }
+	attemptRepo := repository.NewAttemptRepository(app.DB)
+	attemptService := services.NewAttemptService(attemptRepo, quizService, app.Cache)
+	attemptHandler := handlers.NewAttemptHandler(attemptService, quizService)
 
-    router.GET("/health", healthHandler.HealthCheck)
+	adminService := services.NewAdminService(quizRepo, app.Cache)
+	adminHandler := handlers.NewAdminHandler(adminService)
 
-    return router
+	// API v1 routes
+	v1 := router.Group("/api/v1")
+	{
+		v1.GET("/health", healthHandler.HealthCheck)
+		v1.GET("/topics", topicHandler.GetTopics)
+
+		v1.GET("/topics/:topic/quizzes", quizHandler.GetQuizzes)
+		v1.GET("/quizzes/:slug", quizHandler.GetQuizBySlug)
+		v1.GET("/quizzes/:slug/questions", quizHandler.GetQuizQuestions)
+
+		v1.POST("/quizzes/:slug/attempts", attemptHandler.CreateAttempt)
+		v1.PUT("/quizzes/:slug/attempts/:id", attemptHandler.SubmitAttempt)
+		v1.GET("/quizzes/:slug/attempts/:id", attemptHandler.GetAttempt)
+
+		// Admin routes
+		admin := v1.Group("/admin")
+		{
+			admin.POST("/quizzes", adminHandler.CreateQuiz)
+			admin.PUT("/quizzes/:id", adminHandler.UpdateQuiz)
+			admin.DELETE("/quizzes/:id", adminHandler.DeleteQuiz)
+		}
+	}
+
+	router.GET("/health", healthHandler.HealthCheck)
+
+	return router
 }
 
 func (app *Application) startServer() {

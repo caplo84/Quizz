@@ -23,17 +23,17 @@ type Topic struct {
 
 // Quiz represents a quiz with questions
 type Quiz struct {
-	ID                uint      `json:"id" gorm:"primaryKey"`
-	Title             string    `json:"title" gorm:"size:200;not null" validate:"required,min=3,max=200"`
-	Slug              string    `json:"slug" gorm:"size:200;not null;uniqueIndex" validate:"required,min=3,max=200"`
-	Description       *string   `json:"description,omitempty" gorm:"type:text"`
-	TopicID           uint      `json:"topic_id" gorm:"not null;index" validate:"required"`
-	DifficultyLevel   string    `json:"difficulty_level" gorm:"size:20;default:medium;check:difficulty_level IN ('easy','medium','hard')" validate:"oneof=easy medium hard"`
-	TimeLimitMinutes  int       `json:"time_limit_minutes" gorm:"default:30" validate:"min=1,max=180"`
-	TotalQuestions    int       `json:"total_questions" gorm:"default:0"`
-	IsActive          bool      `json:"is_active" gorm:"default:true"`
-	CreatedAt         time.Time `json:"created_at"`
-	UpdatedAt         time.Time `json:"updated_at"`
+	ID               uint      `json:"id" gorm:"primaryKey"`
+	Title            string    `json:"title" gorm:"size:200;not null" validate:"required,min=3,max=200"`
+	Slug             string    `json:"slug" gorm:"size:200;not null;uniqueIndex" validate:"required,min=3,max=200"`
+	Description      *string   `json:"description,omitempty" gorm:"type:text"`
+	TopicID          uint      `json:"topic_id" gorm:"not null;index" validate:"required"`
+	DifficultyLevel  string    `json:"difficulty_level" gorm:"size:20;default:medium;check:difficulty_level IN ('easy','medium','hard')" validate:"oneof=easy medium hard"`
+	TimeLimitMinutes int       `json:"time_limit_minutes" gorm:"default:30" validate:"min=1,max=180"`
+	TotalQuestions   int       `json:"total_questions" gorm:"default:0"`
+	IsActive         bool      `json:"is_active" gorm:"default:true"`
+	CreatedAt        time.Time `json:"created_at"`
+	UpdatedAt        time.Time `json:"updated_at"`
 
 	// Relationships
 	Topic     Topic      `json:"topic" gorm:"foreignKey:TopicID;constraint:OnDelete:CASCADE"`
@@ -88,33 +88,33 @@ func (ua *UserAnswers) Scan(value interface{}) error {
 		*ua = make(UserAnswers)
 		return nil
 	}
-	
+
 	bytes, ok := value.([]byte)
 	if !ok {
 		return nil
 	}
-	
+
 	return json.Unmarshal(bytes, ua)
 }
 
 // Attempt represents a user's quiz attempt
 type Attempt struct {
-	ID                 uint         `json:"id" gorm:"primaryKey"`
-	QuizID             uint         `json:"quiz_id" gorm:"not null;index" validate:"required"`
-	UserIdentifier     *string      `json:"user_identifier,omitempty" gorm:"size:255;index"`
-	UserName           *string      `json:"user_name,omitempty" gorm:"size:100"`
-	StartedAt          time.Time    `json:"started_at" gorm:"default:CURRENT_TIMESTAMP"`
-	CompletedAt        *time.Time   `json:"completed_at,omitempty"`
-	TotalScore         int          `json:"total_score" gorm:"default:0"`
-	MaxPossibleScore   int          `json:"max_possible_score" gorm:"default:0"`
-	PercentageScore    float64      `json:"percentage_score" gorm:"type:decimal(5,2);default:0.00"`
-	TimeTakenSeconds   *int         `json:"time_taken_seconds,omitempty"`
-	Status             string       `json:"status" gorm:"size:20;default:in_progress;check:status IN ('in_progress','completed','abandoned')" validate:"oneof=in_progress completed abandoned"`
-	Answers            UserAnswers  `json:"answers" gorm:"type:jsonb"`
-	Score              int          `json:"score" gorm:"default:0"`        // Add this for compatibility
-	IsCompleted        bool         `json:"is_completed" gorm:"default:false"` // Add this field
-	CreatedAt          time.Time    `json:"created_at"`
-	UpdatedAt          time.Time    `json:"updated_at"`
+	ID               uint        `json:"id" gorm:"primaryKey"`
+	QuizID           uint        `json:"quiz_id" gorm:"not null;index" validate:"required"`
+	UserIdentifier   *string     `json:"user_identifier,omitempty" gorm:"size:255;index"`
+	UserName         *string     `json:"user_name,omitempty" gorm:"size:100"`
+	StartedAt        time.Time   `json:"started_at" gorm:"default:CURRENT_TIMESTAMP"`
+	CompletedAt      *time.Time  `json:"completed_at,omitempty"`
+	TotalScore       int         `json:"total_score" gorm:"default:0"`
+	MaxPossibleScore int         `json:"max_possible_score" gorm:"default:0"`
+	PercentageScore  float64     `json:"percentage_score" gorm:"type:decimal(5,2);default:0.00"`
+	TimeTakenSeconds *int        `json:"time_taken_seconds,omitempty"`
+	Status           string      `json:"status" gorm:"size:20;default:in_progress;check:status IN ('in_progress','completed','abandoned')" validate:"oneof=in_progress completed abandoned"`
+	Answers          UserAnswers `json:"answers" gorm:"type:jsonb"`
+	Score            int         `json:"score" gorm:"default:0"`            // Add this for compatibility
+	IsCompleted      bool        `json:"is_completed" gorm:"default:false"` // Add this field
+	CreatedAt        time.Time   `json:"created_at"`
+	UpdatedAt        time.Time   `json:"updated_at"`
 
 	// Relationships
 	Quiz Quiz `json:"quiz" gorm:"foreignKey:QuizID;constraint:OnDelete:CASCADE"`
@@ -134,27 +134,27 @@ type TopicResponse struct {
 
 // QuizListResponse represents quiz data for list endpoints
 type QuizListResponse struct {
-	ID              uint   `json:"id"`
-	Title           string `json:"title"`
-	Slug            string `json:"slug"`
-	Description     *string `json:"description,omitempty"`
-	DifficultyLevel string `json:"difficulty_level"`
-	TimeLimitMinutes int   `json:"time_limit_minutes"`
-	TotalQuestions  int    `json:"total_questions"`
-	TopicName       string `json:"topic_name"`
-	TopicSlug       string `json:"topic_slug"`
+	ID               uint    `json:"id"`
+	Title            string  `json:"title"`
+	Slug             string  `json:"slug"`
+	Description      *string `json:"description,omitempty"`
+	DifficultyLevel  string  `json:"difficulty_level"`
+	TimeLimitMinutes int     `json:"time_limit_minutes"`
+	TotalQuestions   int     `json:"total_questions"`
+	TopicName        string  `json:"topic_name"`
+	TopicSlug        string  `json:"topic_slug"`
 }
 
 // QuizDetailResponse represents detailed quiz data
 type QuizDetailResponse struct {
-	ID              uint          `json:"id"`
-	Title           string        `json:"title"`
-	Slug            string        `json:"slug"`
-	Description     *string       `json:"description,omitempty"`
-	DifficultyLevel string        `json:"difficulty_level"`
-	TimeLimitMinutes int          `json:"time_limit_minutes"`
-	TotalQuestions  int           `json:"total_questions"`
-	Topic           TopicResponse `json:"topic"`
+	ID               uint          `json:"id"`
+	Title            string        `json:"title"`
+	Slug             string        `json:"slug"`
+	Description      *string       `json:"description,omitempty"`
+	DifficultyLevel  string        `json:"difficulty_level"`
+	TimeLimitMinutes int           `json:"time_limit_minutes"`
+	TotalQuestions   int           `json:"total_questions"`
+	Topic            TopicResponse `json:"topic"`
 }
 
 // QuestionResponse represents question data for API responses (without correct answers)
@@ -223,12 +223,12 @@ type QuizUpdateRequest struct {
 
 // QuestionCreateRequest represents the request to create a new question
 type QuestionCreateRequest struct {
-	QuestionText string                   `json:"question_text" validate:"required,min=10"`
-	QuestionType string                   `json:"question_type" validate:"oneof=multiple_choice true_false text"`
-	Points       int                      `json:"points" validate:"min=1,max=100"`
-	Explanation  *string                  `json:"explanation,omitempty"`
-	OrderIndex   int                      `json:"order_index" validate:"required,min=1"`
-	Choices      []ChoiceCreateRequest    `json:"choices,omitempty" validate:"dive"`
+	QuestionText string                `json:"question_text" validate:"required,min=10"`
+	QuestionType string                `json:"question_type" validate:"oneof=multiple_choice true_false text"`
+	Points       int                   `json:"points" validate:"min=1,max=100"`
+	Explanation  *string               `json:"explanation,omitempty"`
+	OrderIndex   int                   `json:"order_index" validate:"required,min=1"`
+	Choices      []ChoiceCreateRequest `json:"choices,omitempty" validate:"dive"`
 }
 
 // ChoiceCreateRequest represents the request to create a new choice
@@ -317,11 +317,11 @@ func (a *Attempt) ToResponse(includeAnswers bool) AttemptResponse {
 		TimeTakenSeconds: a.TimeTakenSeconds,
 		Status:           a.Status,
 	}
-	
+
 	if includeAnswers {
 		response.Answers = a.Answers
 	}
-	
+
 	return response
 }
 
@@ -340,29 +340,29 @@ func (t *Topic) ToResponse() TopicResponse {
 // ToListResponse converts Quiz to QuizListResponse
 func (q *Quiz) ToListResponse() QuizListResponse {
 	return QuizListResponse{
-		ID:              q.ID,
-		Title:           q.Title,
-		Slug:            q.Slug,
-		Description:     q.Description,
-		DifficultyLevel: q.DifficultyLevel,
+		ID:               q.ID,
+		Title:            q.Title,
+		Slug:             q.Slug,
+		Description:      q.Description,
+		DifficultyLevel:  q.DifficultyLevel,
 		TimeLimitMinutes: q.TimeLimitMinutes,
-		TotalQuestions:  q.TotalQuestions,
-		TopicName:       q.Topic.Name,
-		TopicSlug:       q.Topic.Slug,
+		TotalQuestions:   q.TotalQuestions,
+		TopicName:        q.Topic.Name,
+		TopicSlug:        q.Topic.Slug,
 	}
 }
 
 // ToDetailResponse converts Quiz to QuizDetailResponse
 func (q *Quiz) ToDetailResponse() QuizDetailResponse {
 	return QuizDetailResponse{
-		ID:              q.ID,
-		Title:           q.Title,
-		Slug:            q.Slug,
-		Description:     q.Description,
-		DifficultyLevel: q.DifficultyLevel,
+		ID:               q.ID,
+		Title:            q.Title,
+		Slug:             q.Slug,
+		Description:      q.Description,
+		DifficultyLevel:  q.DifficultyLevel,
 		TimeLimitMinutes: q.TimeLimitMinutes,
-		TotalQuestions:  q.TotalQuestions,
-		Topic:           q.Topic.ToResponse(),
+		TotalQuestions:   q.TotalQuestions,
+		Topic:            q.Topic.ToResponse(),
 	}
 }
 
@@ -376,7 +376,7 @@ func (q *Question) ToResponse() QuestionResponse {
 			OrderIndex: choice.OrderIndex,
 		}
 	}
-	
+
 	return QuestionResponse{
 		ID:           q.ID,
 		QuestionText: q.QuestionText,
