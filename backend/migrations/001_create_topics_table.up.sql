@@ -14,10 +14,9 @@ CREATE TABLE topics (
 CREATE INDEX idx_topics_slug ON topics(slug);
 CREATE INDEX idx_topics_is_active ON topics(is_active);
 
--- Insert default topics
+-- Insert topics
 INSERT INTO topics (name, slug, description, icon_url) VALUES
-('Programming', 'programming', 'Test your programming knowledge', '/icons/programming.svg'),
-('Science', 'science', 'General science questions', '/icons/science.svg'),
-('History', 'history', 'World history and events', '/icons/history.svg'),
-('Mathematics', 'mathematics', 'Math problems and concepts', '/icons/math.svg'),
-('Technology', 'technology', 'Modern technology and computing', '/icons/tech.svg');
+('HTML', 'html', 'HyperText Markup Language fundamentals', '/icon-html.svg'),
+('CSS', 'css', 'Cascading Style Sheets fundamentals', '/icon-css.svg'),
+('JavaScript', 'javascript', 'JavaScript programming fundamentals', '/icon-js.svg'),
+('Accessibility', 'accessibility', 'Web accessibility best practices', '/icon-accessibility.svg');

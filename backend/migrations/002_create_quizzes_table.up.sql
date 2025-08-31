@@ -18,3 +18,14 @@ CREATE INDEX idx_quizzes_slug ON quizzes(slug);
 CREATE INDEX idx_quizzes_topic_id ON quizzes(topic_id);
 CREATE INDEX idx_quizzes_difficulty ON quizzes(difficulty_level);
 CREATE INDEX idx_quizzes_is_active ON quizzes(is_active);
+
+-- Insert initial quizzes
+INSERT INTO quizzes (title, slug, description, topic_id, difficulty_level, total_questions) VALUES
+('HTML Basics', 'html-basics', 'Test your knowledge of HTML fundamentals', 
+ (SELECT id FROM topics WHERE slug = 'html'), 'medium', 10),
+('CSS Basics', 'css-basics', 'Test your knowledge of CSS fundamentals', 
+ (SELECT id FROM topics WHERE slug = 'css'), 'medium', 10),
+('JavaScript Basics', 'javascript-basics', 'Test your knowledge of JavaScript fundamentals', 
+ (SELECT id FROM topics WHERE slug = 'javascript'), 'medium', 10),
+('Accessibility Basics', 'accessibility-basics', 'Test your knowledge of web accessibility', 
+ (SELECT id FROM topics WHERE slug = 'accessibility'), 'medium', 10);
