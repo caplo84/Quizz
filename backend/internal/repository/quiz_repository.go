@@ -33,7 +33,7 @@ func (r *quizRepository) GetQuizBySlug(ctx context.Context, slug string) (*model
 
 func (r *quizRepository) GetQuizQuestions(ctx context.Context, quizID uint) ([]models.Question, error) {
 	var questions []models.Question
-	if err := r.db.WithContext(ctx).Where("quiz_id = ?", quizID).Find(&questions).Error; err != nil {
+	if err := r.db.WithContext(ctx).Preload("Choices").Where("quiz_id = ?", quizID).Order("order_index ASC").Find(&questions).Error; err != nil {
 		return nil, err
 	}
 	return questions, nil

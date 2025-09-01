@@ -2,7 +2,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { selectIcon, selectQuiz } from "./homeSlice";
 import { useNavigate } from "react-router-dom";
 
-function HomeItem({ img, text }) {
+function HomeItem({ img, text, slug }) {
   const { darkMode } = useSelector((state) => state.home);
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -10,7 +10,7 @@ function HomeItem({ img, text }) {
   function setQuiz() {
     dispatch(selectQuiz(text));
     dispatch(selectIcon(img));
-    navigate(`/${text}`);
+    navigate(`/${slug}`); // Use slug instead of text for navigation
   }
 
   const bgColors = {

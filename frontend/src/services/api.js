@@ -1,5 +1,5 @@
 // API base URL configuration
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
+const API_BASE_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/v1`;
 
 // Generic API request function
 async function apiRequest(endpoint, options = {}) {
@@ -14,6 +14,7 @@ async function apiRequest(endpoint, options = {}) {
   };
 
   try {
+    console.log('🌐 Making API request to:', url);
     const response = await fetch(url, config);
     
     if (!response.ok) {
@@ -21,9 +22,18 @@ async function apiRequest(endpoint, options = {}) {
       throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
     }
     
-    return await response.json();
+    const result = await response.json();
+    console.log('📡 API response:', result);
+    
+    // Backend returns data wrapped in {success: true, data: [...]}
+    if (result.success && result.data) {
+      return result.data;
+    }
+    
+    // Fallback if structure is different
+    return result;
   } catch (error) {
-    console.error(`API request failed for ${endpoint}:`, error);
+    console.error(`💥 API request failed for ${endpoint}:`, error);
     throw error;
   }
 }
@@ -35,8 +45,14 @@ export const api = {
 
   // Get all quizzes (optionally filtered by topic)
   getQuizzes: (topicId = null) => {
-    const query = topicId ? `?topic_id=${topicId}` : '';
-    return apiRequest(`/quizzes${query}`);
+    if (topicId) {
+      // Use the topics/:topic/quizzes endpoint for specific topics
+      return apiRequest(`/topics/${topicId}/quizzes`);
+    } else {
+      // For getting all quizzes, we'll need to fetch all topics first
+      // This is handled in the getQuiz() legacy function
+      return apiRequest('/topics'); // This will be processed differently
+    }
   },
 
   // Get a specific quiz by slug
@@ -68,25 +84,50 @@ export const api = {
 // Legacy function for backward compatibility
 export async function getQuiz() {
   try {
-    const topics = await api.getTopics();
-    const quizzes = await api.getQuizzes();
+    console.log('🔄 Fetching data from backend API...');
+    console.log('🔗 API_BASE_URL:', API_BASE_URL);
     
-    // Transform the data to match the expected format
-    return {
-      topics: topics.data || topics,
-      quizzes: quizzes.data || quizzes,
-    };
-  } catch (error) {
-    console.error('Failed to get quiz data:', error);
-    // Fallback to local data if API is not available
-    try {
-      const res = await fetch("/data.json");
-      if (!res.ok) throw Error("Failed in getting quiz");
-      const data = await res.json();
-      return data?.quizzes;
-    } catch (fallbackError) {
-      throw new Error("Both API and local data failed to load");
+    const topics = await api.getTopics();
+    console.log('📂 Raw topics response:', topics);
+    console.log('📂 Topics type:', typeof topics, 'Array?', Array.isArray(topics));
+    
+    // Handle different possible response structures
+    let topicsArray = topics;
+    if (topics && topics.data && Array.isArray(topics.data)) {
+      topicsArray = topics.data;
+    } else if (!Array.isArray(topics)) {
+      console.warn('⚠️ Topics is not an array:', topics);
+      topicsArray = [];
     }
+    
+    // Transform topics into the quiz list format expected by the frontend
+    // Each topic represents a quiz category that users can select
+    const quizItems = [];
+    
+    if (topicsArray && topicsArray.length > 0) {
+      for (const topic of topicsArray) {
+        console.log('🏷️ Processing topic:', topic);
+        // Each topic becomes a selectable quiz item on the home page
+        quizItems.push({
+          title: topic.name,  // e.g., "HTML", "CSS", "JavaScript"
+          icon: topic.icon_url || `/icon-${topic.name.toLowerCase()}.svg`,  // Use backend icon_url or fallback
+          slug: topic.slug || topic.name.toLowerCase(),
+          id: topic.id,
+          description: topic.description || `Test your knowledge of ${topic.name}`
+        });
+      }
+    } else {
+      console.warn('⚠️ No topics found or topics array is empty');
+    }
+    
+    console.log('🎯 Final quiz items for home page:', quizItems);
+    
+    // Return array of quiz items for the home page
+    return quizItems;
+  } catch (error) {
+    console.error('💥 Failed to get quiz data from backend:', error);
+    console.error('💥 Error details:', error.stack);
+    throw new Error(`Failed to load quiz data: ${error.message}`);
   }
 }
 
