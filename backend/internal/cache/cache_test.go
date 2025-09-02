@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func setupTestRedis(t *testing.T) *RedisCache {
+func setupTestRedis(t *testing.T) Cache {
 	// Start miniredis server
 	s, err := miniredis.Run()
 	if err != nil {
@@ -22,7 +22,7 @@ func setupTestRedis(t *testing.T) *RedisCache {
 		Addr: s.Addr(),
 	})
 
-	return &RedisCache{client: client}
+	return NewRedisCache(client)
 }
 
 func TestRedisCache_SetAndGet(t *testing.T) {
@@ -30,7 +30,7 @@ func TestRedisCache_SetAndGet(t *testing.T) {
 	ctx := context.Background()
 
 	key := "test:key"
-	value := "test_value"
+	value := []byte("test_value")
 	ttl := time.Minute
 
 	// Test Set
@@ -50,7 +50,7 @@ func TestRedisCache_GetNonExistent(t *testing.T) {
 	// Test Get for non-existent key
 	result, err := cache.Get(ctx, "non:existent")
 	assert.Error(t, err)
-	assert.Equal(t, "", result)
+	assert.Nil(t, result)
 	assert.Equal(t, redis.Nil, err)
 }
 
@@ -59,7 +59,7 @@ func TestRedisCache_Delete(t *testing.T) {
 	ctx := context.Background()
 
 	key := "test:delete"
-	value := "delete_me"
+	value := []byte("delete_me")
 
 	// Set a value
 	err := cache.Set(ctx, key, value, time.Minute)

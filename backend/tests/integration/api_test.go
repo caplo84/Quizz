@@ -12,6 +12,7 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
+	"github.com/caplo84/quizz-backend/internal/cache"
 	"github.com/caplo84/quizz-backend/internal/handlers"
 	"github.com/caplo84/quizz-backend/internal/models"
 	"github.com/caplo84/quizz-backend/internal/repository"
@@ -39,7 +40,8 @@ func setupTestApp(t *testing.T) (*gin.Engine, *gorm.DB) {
 
 	// Setup repositories and services
 	topicRepo := repository.NewTopicRepository(db)
-	topicService := services.NewTopicService(topicRepo)
+	memoryCache := cache.NewMemoryCache()
+	topicService := services.NewTopicService(topicRepo, memoryCache)
 	topicHandler := handlers.NewTopicHandler(topicService)
 
 	// Setup Gin router

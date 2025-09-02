@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/caplo84/quizz-backend/internal/models"
 	"github.com/stretchr/testify/assert"
@@ -30,9 +31,40 @@ func (m *MockTopicRepository) CreateTopic(ctx context.Context, topic *models.Top
 	return args.Error(0)
 }
 
+// MockCache for testing
+type MockCache struct {
+	mock.Mock
+}
+
+func (m *MockCache) Get(ctx context.Context, key string) ([]byte, error) {
+	args := m.Called(ctx, key)
+	return args.Get(0).([]byte), args.Error(1)
+}
+
+func (m *MockCache) Set(ctx context.Context, key string, value []byte, ttl time.Duration) error {
+	args := m.Called(ctx, key, value, ttl)
+	return args.Error(0)
+}
+
+func (m *MockCache) Delete(ctx context.Context, key string) error {
+	args := m.Called(ctx, key)
+	return args.Error(0)
+}
+
+func (m *MockCache) Exists(ctx context.Context, key string) (bool, error) {
+	args := m.Called(ctx, key)
+	return args.Bool(0), args.Error(1)
+}
+
+func (m *MockCache) FlushAll(ctx context.Context) error {
+	args := m.Called(ctx)
+	return args.Error(0)
+}
+
 func TestTopicService_GetAllTopics(t *testing.T) {
 	mockRepo := new(MockTopicRepository)
-	service := NewTopicService(mockRepo)
+	mockCache := new(MockCache)
+	service := NewTopicService(mockRepo, mockCache)
 	ctx := context.Background()
 
 	// Test successful case
@@ -52,7 +84,8 @@ func TestTopicService_GetAllTopics(t *testing.T) {
 
 func TestTopicService_GetAllTopics_Error(t *testing.T) {
 	mockRepo := new(MockTopicRepository)
-	service := NewTopicService(mockRepo)
+	mockCache := new(MockCache)
+	service := NewTopicService(mockRepo, mockCache)
 	ctx := context.Background()
 
 	mockRepo.On("GetAllTopics", ctx).Return([]models.Topic{}, errors.New("database error"))
@@ -66,7 +99,8 @@ func TestTopicService_GetAllTopics_Error(t *testing.T) {
 
 func TestTopicService_GetTopicByID(t *testing.T) {
 	mockRepo := new(MockTopicRepository)
-	service := NewTopicService(mockRepo)
+	mockCache := new(MockCache)
+	service := NewTopicService(mockRepo, mockCache)
 	ctx := context.Background()
 
 	expectedTopic := &models.Topic{ID: 1, Name: "Programming", Slug: "programming"}

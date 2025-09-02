@@ -33,12 +33,9 @@ jobs:
         echo "EOF" >> $GITHUB_OUTPUT
 
     - name: Create Release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: softprops/action-gh-release@v1
       with:
-        tag_name: ${{ github.ref_name }}
-        release_name: Release ${{ github.ref_name }}
+        name: Release ${{ github.ref_name }}
         body: |
           ## Changes in this Release
           ${{ steps.changelog.outputs.changelog }}
@@ -48,3 +45,4 @@ jobs:
           - Frontend: `ghcr.io/${{ github.repository }}-frontend:${{ github.ref_name }}`
         draft: false
         prerelease: ${{ contains(github.ref_name, '-') }}
+        token: ${{ secrets.GITHUB_TOKEN }}
