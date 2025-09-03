@@ -1,6 +1,6 @@
-module github.com/caplo84/quizz-backend
 
-go 1.22.12
+module github.com/caplo84/quizz-backend
+go 1.23
 
 require (
 	github.com/alicebob/miniredis/v2 v2.35.0
