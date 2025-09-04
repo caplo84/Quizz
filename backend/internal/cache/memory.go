@@ -96,17 +96,14 @@ func (m *memoryCache) cleanup() {
 	ticker := time.NewTicker(time.Minute)
 	defer ticker.Stop()
 
-	for {
-		select {
-		case <-ticker.C:
-			m.mu.Lock()
-			now := time.Now()
-			for key, item := range m.data {
-				if now.After(item.expiresAt) {
-					delete(m.data, key)
-				}
+	for range ticker.C {
+		m.mu.Lock()
+		now := time.Now()
+		for key, item := range m.data {
+			if now.After(item.expiresAt) {
+				delete(m.data, key)
 			}
-			m.mu.Unlock()
 		}
+		m.mu.Unlock()
 	}
 }

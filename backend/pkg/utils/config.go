@@ -3,7 +3,6 @@ package utils
 import (
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -150,31 +149,6 @@ func validateConfig(config *Config) error {
 func getEnvOrDefault(key, defaultValue string) string {
 	if value := os.Getenv(key); value != "" {
 		return value
-	}
-	return defaultValue
-}
-
-func getEnvAsInt(key string, defaultValue int) int {
-	if value := os.Getenv(key); value != "" {
-		if intVal, err := strconv.Atoi(value); err == nil {
-			return intVal
-		}
-	}
-	return defaultValue
-}
-
-func getEnvAsBool(key string, defaultValue bool) bool {
-	if value := os.Getenv(key); value != "" {
-		if boolVal, err := strconv.ParseBool(value); err == nil {
-			return boolVal
-		}
-	}
-	return defaultValue
-}
-
-func getEnvAsSlice(key, delimiter string, defaultValue []string) []string {
-	if value := os.Getenv(key); value != "" {
-		return strings.Split(value, delimiter)
 	}
 	return defaultValue
 }

@@ -39,9 +39,3 @@ func CORS() gin.HandlerFunc {
 		c.Next()
 	}
 }
-
-var config = struct {
-	AllowOrigins []string
-}{
-	AllowOrigins: []string{"http://localhost:5173", "http://localhost:3000"},
-}

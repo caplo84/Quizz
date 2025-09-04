@@ -5,14 +5,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/go-playground/validator/v10"
 )
-
-var validate *validator.Validate
-
-func init() {
-	validate = validator.New()
-}
 
 // ValidateJSON validates JSON request body
 func ValidateJSON() gin.HandlerFunc {
