@@ -1,4 +1,6 @@
-FROM node:20-alpine
+# Use ARG to allow dynamic Node version (defaults to 20)
+ARG NODE_VERSION=20
+FROM node:${NODE_VERSION}-alpine
 
 # Set the working directory
 WORKDIR /app

@@ -15,10 +15,18 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Extract Go version from go.mod
+      id: go-version
+      working-directory: ./backend
+      run: |
+        GO_VERSION=$(grep '^go ' go.mod | awk '{print $2}')
+        echo "version=$GO_VERSION" >> $GITHUB_OUTPUT
+        echo "Using Go version: $GO_VERSION"
+
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
-        go-version: '1.22'
+        go-version: ${{ steps.go-version.outputs.version }}
 
     - name: Update Go dependencies
       working-directory: ./backend
@@ -51,10 +59,18 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Extract Node version from package.json
+      id: node-version
+      working-directory: ./frontend
+      run: |
+        NODE_VERSION=$(jq -r '.engines.node' package.json | sed 's/>=//; s/\^//')
+        echo "version=$NODE_VERSION" >> $GITHUB_OUTPUT
+        echo "Using Node version: $NODE_VERSION"
+
     - name: Set up Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '20'
+        node-version: ${{ steps.node-version.outputs.version }}
 
     - name: Update NPM dependencies
       working-directory: ./frontend

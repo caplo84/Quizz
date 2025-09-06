@@ -1,4 +1,6 @@
-FROM golang:1.23-bullseye
+# Use ARG to allow dynamic Go version (defaults to 1.23)
+ARG GO_VERSION=1.23
+FROM golang:${GO_VERSION}-bullseye
 
 # Install common tools
 RUN apt-get update && apt-get install -y \
