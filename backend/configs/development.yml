@@ -53,6 +53,19 @@ cache:
   ttl_seconds: 300
   cleanup_interval: "10m"
 
+github:
+  token: "${GITHUB_TOKEN}"
+  owner: "linkedin"
+  repository: "linkedin-skill-assessments-quizzes"
+  base_url: "https://api.github.com"
+  rate_limit_per_hour: 5000
+  sync_interval: "1h"
+  categories:
+    - "javascript"
+    - "python"
+    - "go"
+    - "java"
+
 features:
   enable_metrics: true
   enable_debug_routes: true
