@@ -35,6 +35,12 @@ type Quiz struct {
 	CreatedAt        time.Time `json:"created_at"`
 	UpdatedAt        time.Time `json:"updated_at"`
 
+	//Additional fields
+	Source            *string    `json:"source,omitempty" gorm:"size:50;index" validate:"omitempty,oneof=manual github quizapi ai-generated"`
+	ExternalReference *string    `json:"external_reference,omitempty" gorm:"size:500"`
+	ExternalID        *string    `json:"external_id,omitempty" gorm:"size:200;index"`
+	LastSyncedAt      *time.Time `json:"last_synced_at,omitempty"`
+
 	// Relationships
 	Topic     Topic      `json:"topic" gorm:"foreignKey:TopicID;constraint:OnDelete:CASCADE"`
 	Questions []Question `json:"questions,omitempty" gorm:"foreignKey:QuizID;constraint:OnDelete:CASCADE"`
@@ -53,6 +59,11 @@ type Question struct {
 	IsActive     bool      `json:"is_active" gorm:"default:true"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
+
+	// Additional fields
+	Source            *string `json:"source,omitempty" gorm:"size:50"`
+	ExternalReference *string `json:"external_reference,omitempty" gorm:"size:500"`
+	ExternalID        *string `json:"external_id,omitempty" gorm:"size:200"`
 
 	// Relationships
 	Quiz    Quiz     `json:"quiz" gorm:"foreignKey:QuizID;constraint:OnDelete:CASCADE"`
