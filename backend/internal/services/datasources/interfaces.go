@@ -21,7 +21,7 @@ type SourceMetadata struct {
 }
 
 type FetchParams struct {
-	Category  string
+	Category   string
 	Difficulty string
 	Limit      int
 	Offset     int
