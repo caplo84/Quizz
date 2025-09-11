@@ -67,3 +67,23 @@ func (r *quizRepository) GetQuizByID(ctx context.Context, id uint) (*models.Quiz
 
 	return &quiz, nil
 }
+
+func (r *quizRepository) GetQuizByExternalID(ctx context.Context, externalID string) (*models.Quiz, error) {
+	var quiz models.Quiz
+	if err := r.db.WithContext(ctx).Where("external_id = ?", externalID).First(&quiz).Error; err != nil {
+		return nil, err
+	}
+	return &quiz, nil
+}
+
+func (r *quizRepository) Create(ctx context.Context, quiz *models.Quiz) error {
+	return r.db.WithContext(ctx).Create(quiz).Error
+}
+
+func (r *quizRepository) CreateQuestion(ctx context.Context, question *models.Question) error {
+	return r.db.WithContext(ctx).Create(question).Error
+}
+
+func (r *quizRepository) CreateChoice(ctx context.Context, choice *models.Choice) error {
+	return r.db.WithContext(ctx).Create(choice).Error
+}

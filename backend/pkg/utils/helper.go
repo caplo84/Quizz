@@ -1,51 +1,32 @@
 package utils
 
 import (
-	"crypto/rand"
-	"encoding/hex"
-	"fmt"
-	"time"
+	"strings"
 )
 
-// GenerateID generates a random hex ID
-func GenerateID(length int) string {
-	bytes := make([]byte, length)
-	rand.Read(bytes)
-	return hex.EncodeToString(bytes)
-}
+// GenerateSlug generates a URL-friendly slug from a string
+func GenerateSlug(text string) string {
+	// Convert to lowercase and replace spaces with hyphens
+	slug := strings.ToLower(strings.TrimSpace(text))
+	slug = strings.ReplaceAll(slug, " ", "-")
+	slug = strings.ReplaceAll(slug, "_", "-")
 
-// FormatDuration formats duration in a human-readable way
-func FormatDuration(d time.Duration) string {
-	if d < time.Minute {
-		return fmt.Sprintf("%.0fs", d.Seconds())
-	}
-	if d < time.Hour {
-		return fmt.Sprintf("%.0fm", d.Minutes())
-	}
-	return fmt.Sprintf("%.1fh", d.Hours())
-}
-
-// Contains checks if a slice contains a string
-func Contains(slice []string, item string) bool {
-	for _, s := range slice {
-		if s == item {
-			return true
-		}
-	}
-	return false
-}
-
-// RemoveDuplicates removes duplicate strings from slice
-func RemoveDuplicates(slice []string) []string {
-	keys := make(map[string]bool)
-	result := []string{}
-
-	for _, item := range slice {
-		if !keys[item] {
-			keys[item] = true
-			result = append(result, item)
+	// Remove special characters (keep only alphanumeric and hyphens)
+	var result strings.Builder
+	for _, r := range slug {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '-' {
+			result.WriteRune(r)
 		}
 	}
 
-	return result
+	// Clean up multiple consecutive hyphens
+	slug = result.String()
+	for strings.Contains(slug, "--") {
+		slug = strings.ReplaceAll(slug, "--", "-")
+	}
+
+	// Trim leading/trailing hyphens
+	slug = strings.Trim(slug, "-")
+
+	return slug
 }

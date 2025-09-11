@@ -33,3 +33,15 @@ func (r *topicRepository) GetTopicByID(ctx context.Context, id uint) (*models.To
 func (r *topicRepository) CreateTopic(ctx context.Context, topic *models.Topic) error {
 	return r.db.WithContext(ctx).Create(topic).Error
 }
+
+func (r *topicRepository) GetBySlug(ctx context.Context, slug string) (*models.Topic, error) {
+	var topic models.Topic
+	if err := r.db.WithContext(ctx).Where("slug = ?", slug).First(&topic).Error; err != nil {
+		return nil, err
+	}
+	return &topic, nil
+}
+
+func (r *topicRepository) Create(ctx context.Context, topic *models.Topic) error {
+	return r.db.WithContext(ctx).Create(topic).Error
+}
