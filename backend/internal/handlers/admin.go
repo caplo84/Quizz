@@ -6,15 +6,18 @@ import (
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 type AdminHandler struct {
-	adminService services.AdminService
+	adminService      services.AdminService
+	githubSyncService services.GitHubSyncService
 }
 
-func NewAdminHandler(adminService services.AdminService) *AdminHandler {
+func NewAdminHandler(adminService services.AdminService, githubSyncService services.GitHubSyncService) *AdminHandler {
 	return &AdminHandler{
-		adminService: adminService,
+		adminService:      adminService,
+		githubSyncService: githubSyncService,
 	}
 }
 
@@ -94,5 +97,40 @@ func (h *AdminHandler) DeleteQuiz(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Quiz deleted successfully",
+	})
+}
+
+// SyncGitHubData handles POST /admin/sync-github
+func (h *AdminHandler) SyncGitHubData(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	// Trigger GitHub sync
+	err := h.githubSyncService.SyncFromGitHub(ctx)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "GitHub sync failed",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":   "GitHub sync completed successfully",
+		"timestamp": time.Now(),
+	})
+}
+
+// GetGitHubSyncStatus handles GET /admin/sync-github/status
+func (h *AdminHandler) GetGitHubSyncStatus(c *gin.Context) {
+	// Check rate limits
+	rateLimit, err := h.githubSyncService.GetRateLimit(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get rate limit"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"rate_limit": rateLimit,
+		"last_sync":  "implement this", // You can track this in database
 	})
 }

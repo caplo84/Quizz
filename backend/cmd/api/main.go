@@ -25,6 +25,7 @@ import (
 	"github.com/caplo84/quizz-backend/internal/models"
 	"github.com/caplo84/quizz-backend/internal/repository"
 	"github.com/caplo84/quizz-backend/internal/services"
+	"github.com/caplo84/quizz-backend/internal/services/datasources"
 	"github.com/caplo84/quizz-backend/pkg/utils"
 )
 
@@ -222,6 +223,16 @@ func (app *Application) setupRouter() *gin.Engine {
 	// Prometheus metrics endpoint
 	router.GET("/metrics", metrics.MetricsHandler())
 
+	// GitHub client configuration
+	githubConfig := datasources.GitHubConfig{
+		Token:      os.Getenv("GITHUB_TOKEN"), // Set this environment variable
+		Owner:      "Ebazhanov",
+		Repository: "linkedin-skill-assessments-quizzes",
+		BaseURL:    "https://api.github.com",
+	}
+
+	githubClient := datasources.NewGitHubClient(githubConfig)
+
 	// Initialize repositories and services with cache
 	topicRepo := repository.NewTopicRepository(app.DB)
 	topicService := services.NewTopicService(topicRepo, app.Cache)
@@ -236,7 +247,11 @@ func (app *Application) setupRouter() *gin.Engine {
 	attemptHandler := handlers.NewAttemptHandler(attemptService, quizService)
 
 	adminService := services.NewAdminService(quizRepo, app.Cache)
-	adminHandler := handlers.NewAdminHandler(adminService)
+
+	// Create GitHub sync service
+	githubSyncService := services.NewGitHubSyncService(githubClient, quizRepo, topicRepo)
+
+	adminHandler := handlers.NewAdminHandler(adminService, githubSyncService)
 
 	// API v1 routes
 	v1 := router.Group("/api/v1")
@@ -259,6 +274,12 @@ func (app *Application) setupRouter() *gin.Engine {
 			admin.PUT("/quizzes/:id", adminHandler.UpdateQuiz)
 			admin.DELETE("/quizzes/:id", adminHandler.DeleteQuiz)
 		}
+	}
+
+	adminRoutes := router.Group("/api/admin")
+	{
+		adminRoutes.POST("/sync/github", adminHandler.SyncGitHubData)
+		adminRoutes.GET("/sync/github/status", adminHandler.GetGitHubSyncStatus)
 	}
 
 	router.GET("/health", healthHandler.HealthCheck)
