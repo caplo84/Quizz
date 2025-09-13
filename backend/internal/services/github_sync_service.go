@@ -8,6 +8,9 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
+
 	"github.com/caplo84/quizz-backend/internal/models"
 	"github.com/caplo84/quizz-backend/internal/repository"
 	"github.com/caplo84/quizz-backend/internal/services/datasources"
@@ -395,9 +398,10 @@ func (s *GitHubSyncServiceImpl) generateCleanQuizTitle(rawName string) string {
 		displayName = strings.ReplaceAll(displayName, "_", " ")
 
 		// Title case each word
+		caser := cases.Title(language.Und)
 		words := strings.Fields(displayName)
 		for i, word := range words {
-			words[i] = strings.Title(strings.ToLower(word))
+			words[i] = caser.String(strings.ToLower(word))
 		}
 		displayName = strings.Join(words, " ")
 	}
@@ -445,35 +449,6 @@ func (s *GitHubSyncServiceImpl) getAllTechnologyKeys() map[string]string {
 	}
 
 	return allKeys
-}
-
-// getTechnologiesByCategory returns technologies filtered by category
-func (s *GitHubSyncServiceImpl) getTechnologiesByCategory(category string) map[string]TechConfig {
-	techMap := s.getTechnologyMap()
-	filtered := make(map[string]TechConfig)
-
-	for key, config := range techMap {
-		if strings.EqualFold(config.Category, category) {
-			filtered[key] = config
-		}
-	}
-
-	return filtered
-}
-
-// isValidTechnology checks if a given name is a recognized technology
-func (s *GitHubSyncServiceImpl) isValidTechnology(name string) (bool, string, TechConfig) {
-	techMap := s.getTechnologyMap()
-	validKeys := s.getAllTechnologyKeys()
-
-	cleanName := strings.ToLower(strings.TrimSpace(name))
-	if primaryKey, exists := validKeys[cleanName]; exists {
-		if config, found := techMap[primaryKey]; found {
-			return true, primaryKey, config
-		}
-	}
-
-	return false, "", TechConfig{}
 }
 
 // filterProgrammingLanguages filters categories to include only programming languages
@@ -530,9 +505,10 @@ func (s *GitHubSyncServiceImpl) cleanupCategoryName(categoryName string) string 
 	cleaned = strings.ReplaceAll(cleaned, "_", " ")
 
 	// Title case each word
+	caser := cases.Title(language.Und)
 	words := strings.Fields(cleaned)
 	for i, word := range words {
-		words[i] = strings.Title(strings.ToLower(word))
+		words[i] = caser.String(strings.ToLower(word))
 	}
 
 	return strings.Join(words, " ")
