@@ -10,6 +10,7 @@ import (
 type TopicService interface {
 	GetAllTopics(ctx context.Context) ([]models.Topic, error)
 	GetTopicByID(ctx context.Context, id uint) (*models.Topic, error)
+	GetTopicBySlug(ctx context.Context, slug string) (*models.Topic, error)
 	CreateTopic(ctx context.Context, topic *models.Topic) error
 }
 
@@ -31,6 +32,10 @@ func (s *topicService) GetAllTopics(ctx context.Context) ([]models.Topic, error)
 
 func (s *topicService) GetTopicByID(ctx context.Context, id uint) (*models.Topic, error) {
 	return s.repo.GetTopicByID(ctx, id)
+}
+
+func (s *topicService) GetTopicBySlug(ctx context.Context, slug string) (*models.Topic, error) {
+	return s.repo.GetBySlug(ctx, slug)
 }
 
 func (s *topicService) CreateTopic(ctx context.Context, topic *models.Topic) error {

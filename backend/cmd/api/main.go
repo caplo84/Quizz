@@ -240,7 +240,7 @@ func (app *Application) setupRouter() *gin.Engine {
 
 	quizRepo := repository.NewQuizRepository(app.DB)
 	quizService := services.NewQuizService(quizRepo, app.Cache)
-	quizHandler := handlers.NewQuizHandler(quizService)
+	quizHandler := handlers.NewQuizHandler(quizService, topicService)
 
 	attemptRepo := repository.NewAttemptRepository(app.DB)
 	attemptService := services.NewAttemptService(attemptRepo, quizService, app.Cache)
