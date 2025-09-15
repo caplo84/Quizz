@@ -9,24 +9,40 @@ import (
 )
 
 type QuizHandler struct {
-	quizService services.QuizService // Remove the * pointer
+	quizService  services.QuizService
+	topicService services.TopicService
 }
 
-func NewQuizHandler(quizService services.QuizService) *QuizHandler { // Remove the * pointer
+func NewQuizHandler(quizService services.QuizService, topicService services.TopicService) *QuizHandler {
 	return &QuizHandler{
-		quizService: quizService,
+		quizService:  quizService,
+		topicService: topicService,
 	}
 }
 
-// GetQuizzes handles GET /quizzes
+// GetQuizzes handles GET /quizzes and GET /topics/:topic/quizzes
 func (h *QuizHandler) GetQuizzes(c *gin.Context) {
-	// Optional topic filter
-	topicIDParam := c.Query("topic_id")
 	var topicID uint
 
-	if topicIDParam != "" {
-		if id, err := strconv.ParseUint(topicIDParam, 10, 32); err == nil {
-			topicID = uint(id)
+	// Check if this is the /topics/:topic/quizzes route
+	topicSlug := c.Param("topic")
+	if topicSlug != "" {
+		// Get topic ID from slug
+		topic, err := h.topicService.GetTopicBySlug(c.Request.Context(), topicSlug)
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{
+				"error": "Topic not found",
+			})
+			return
+		}
+		topicID = topic.ID
+	} else {
+		// Fallback to optional topic_id query parameter for /quizzes route
+		topicIDParam := c.Query("topic_id")
+		if topicIDParam != "" {
+			if id, err := strconv.ParseUint(topicIDParam, 10, 32); err == nil {
+				topicID = uint(id)
+			}
 		}
 	}
 
