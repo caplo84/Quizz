@@ -194,6 +194,12 @@ func (s *GitHubSyncServiceImpl) ensureTopicExists(ctx context.Context, categoryN
 		IsActive:    true,
 	}
 
+	// Auto-assign icon if available
+	if iconURL, found := GetIconForSlug(newTopic.Slug); found {
+		newTopic.IconURL = stringPtr(iconURL)
+		log.Printf("🎨 Auto-assigned icon %s to topic %s", iconURL, newTopic.Slug)
+	}
+
 	if err := s.topicRepo.Create(ctx, newTopic); err != nil {
 		return nil, fmt.Errorf("failed to create topic: %w", err)
 	}
@@ -424,6 +430,7 @@ type TechConfig struct {
 	DisplayName string   // How to display this technology
 	Aliases     []string // Alternative names for the same technology
 	Category    string   // Programming Language, Framework, Database, etc.
+	IconURL     string   // URL to the technology icon
 }
 
 // getTechnologyMap returns the centralized technology configuration

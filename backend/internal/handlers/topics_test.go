@@ -33,6 +33,11 @@ func (m *MockTopicService) CreateTopic(ctx context.Context, topic *models.Topic)
 	return args.Error(0)
 }
 
+func (m *MockTopicService) GetTopicBySlug(ctx context.Context, slug string) (*models.Topic, error) {
+	args := m.Called(ctx, slug)
+	return args.Get(0).(*models.Topic), args.Error(1)
+}
+
 func TestTopicHandler_GetTopics_Success(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
