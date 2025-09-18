@@ -10,20 +10,8 @@ export const topicsApi = {
     return response.data || response;
   },
   getQuizzes: async (topicSlug) => {
-    // Map topic slug to topic ID (based on backend data)
-    const topicIdMap = {
-      'html': 1,
-      'css': 2,
-      'javascript': 3,
-      'accessibility': 4
-    };
-    
-    const topicId = topicIdMap[topicSlug.toLowerCase()];
-    if (!topicId) {
-      throw new Error(`Unknown topic: ${topicSlug}`);
-    }
-    
-    const response = await apiClient.get(`/topics/${topicSlug}/quizzes?topic_id=${topicId}`);
+    // Use the backend endpoint that accepts topic slugs directly
+    const response = await apiClient.get(`/topics/${topicSlug}/quizzes`);
     return response.data || response;
   },
 };
