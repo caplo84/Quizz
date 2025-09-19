@@ -40,7 +40,14 @@ function Home() {
         <ul className="mobile:space-y-5 space-y-8">
           {data && Array.isArray(data) && data.length > 0 ? (
             data.map((item) => (
-              <HomeItem key={item.title} img={item.icon} text={item.title} slug={item.slug} />
+              <HomeItem 
+                key={item.title} 
+                img={item.icon} 
+                text={item.title} 
+                slug={item.slug}
+                source={item.source}
+                quizCount={item.quizCount}
+              />
             ))
           ) : (
             <li className="text-center py-12">

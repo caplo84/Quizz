@@ -107,13 +107,37 @@ export async function getQuiz() {
     if (topicsArray && topicsArray.length > 0) {
       for (const topic of topicsArray) {
         console.log('🏷️ Processing topic:', topic);
+        
+        // Determine source - if has icon_url, it's original manual data, otherwise GitHub
+        const source = topic.icon_url ? 'manual' : 'github';
+        
+        // For external topics, use a generic programming icon, for original topics use specific icons
+        const iconUrl = topic.icon_url || '/icon-js.svg'; // fallback to JS icon for external topics
+        
+        // Check if this topic has quizzes by trying to fetch them
+        let quizCount = 0;
+        try {
+          const topicQuizzes = await apiRequest(`/topics/${topic.slug}/quizzes`);
+          if (Array.isArray(topicQuizzes)) {
+            quizCount = topicQuizzes.length;
+          }
+        } catch (error) {
+          console.warn(`⚠️ Could not fetch quizzes for topic ${topic.name}:`, error);
+          // For original topics (manual), assume they have quizzes even if API fails
+          if (source === 'manual') {
+            quizCount = 1; // Assume at least 1 quiz exists for original topics
+          }
+        }
+        
         // Each topic becomes a selectable quiz item on the home page
         quizItems.push({
-          title: topic.name,  // e.g., "HTML", "CSS", "JavaScript"
-          icon: topic.icon_url || `/icon-${topic.name.toLowerCase()}.svg`,  // Use backend icon_url or fallback
-          slug: topic.slug || topic.name.toLowerCase(),
+          title: topic.name,  
+          icon: iconUrl,
+          slug: topic.slug || topic.name.toLowerCase().replace(/\s+/g, '-'),
           id: topic.id,
-          description: topic.description || `Test your knowledge of ${topic.name}`
+          description: topic.description || `Test your knowledge of ${topic.name}`,
+          source: source,
+          quizCount: quizCount
         });
       }
     } else {
