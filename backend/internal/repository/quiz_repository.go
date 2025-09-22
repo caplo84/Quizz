@@ -39,6 +39,28 @@ func (r *quizRepository) GetQuizQuestions(ctx context.Context, quizID uint) ([]m
 	return questions, nil
 }
 
+func (r *quizRepository) GetRandomQuestions(ctx context.Context, topicID uint, limit int, excludeQuestionIDs []uint) ([]models.Question, error) {
+	var questions []models.Question
+
+	query := r.db.WithContext(ctx).
+		Preload("Choices").
+		Joins("JOIN quizzes ON questions.quiz_id = quizzes.id").
+		Where("quizzes.topic_id = ? AND questions.is_active = ? AND quizzes.is_active = ?", topicID, true, true)
+
+	// Exclude already used questions if any
+	if len(excludeQuestionIDs) > 0 {
+		query = query.Where("questions.id NOT IN ?", excludeQuestionIDs)
+	}
+
+	// Order randomly and limit results
+	// Use RANDOM() for PostgreSQL and SQLite
+	if err := query.Order("RANDOM()").Limit(limit).Find(&questions).Error; err != nil {
+		return nil, err
+	}
+
+	return questions, nil
+}
+
 func (r *quizRepository) CreateQuiz(ctx context.Context, quiz *models.Quiz) error {
 	return r.db.WithContext(ctx).Create(quiz).Error
 }

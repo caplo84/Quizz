@@ -18,6 +18,7 @@ type QuizRepository interface {
 	GetQuizBySlug(ctx context.Context, slug string) (*models.Quiz, error)
 	GetQuizByExternalID(ctx context.Context, externalID string) (*models.Quiz, error)
 	GetQuizQuestions(ctx context.Context, quizID uint) ([]models.Question, error)
+	GetRandomQuestions(ctx context.Context, topicID uint, limit int, excludeQuestionIDs []uint) ([]models.Question, error)
 	Create(ctx context.Context, quiz *models.Quiz) error
 	CreateQuiz(ctx context.Context, quiz *models.Quiz) error
 	CreateQuestion(ctx context.Context, question *models.Question) error
