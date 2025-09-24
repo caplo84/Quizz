@@ -3,6 +3,7 @@ package handlers
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/caplo84/quizz-backend/internal/services"
 	"github.com/gin-gonic/gin"
@@ -105,5 +106,67 @@ func (h *QuizHandler) GetQuizQuestions(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"data": questions,
+	})
+}
+
+// GetRandomQuestions handles GET /topics/:topic/questions/random?limit=10&exclude=1,2,3
+func (h *QuizHandler) GetRandomQuestions(c *gin.Context) {
+	topicSlug := c.Param("topic")
+
+	// Get topic by slug
+	topic, err := h.topicService.GetTopicBySlug(c.Request.Context(), topicSlug)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "Topic not found",
+		})
+		return
+	}
+
+	// Parse limit parameter (default to 10)
+	limit := 10
+	if limitParam := c.Query("limit"); limitParam != "" {
+		if parsedLimit, err := strconv.Atoi(limitParam); err == nil && parsedLimit > 0 && parsedLimit <= 50 {
+			limit = parsedLimit
+		}
+	}
+
+	// Parse exclude parameter (comma-separated question IDs)
+	var excludeQuestionIDs []uint
+	if excludeParam := c.Query("exclude"); excludeParam != "" {
+		excludeStrings := strings.Split(excludeParam, ",")
+		for _, idStr := range excludeStrings {
+			if id, err := strconv.ParseUint(strings.TrimSpace(idStr), 10, 32); err == nil {
+				excludeQuestionIDs = append(excludeQuestionIDs, uint(id))
+			}
+		}
+	}
+
+	questions, err := h.quizService.GetRandomQuestions(c.Request.Context(), topic.ID, limit, excludeQuestionIDs)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to fetch random questions",
+		})
+		return
+	}
+
+	// Remove correct answers from response
+	for i := range questions {
+		for j := range questions[i].Choices {
+			questions[i].Choices[j].IsCorrect = false
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data": questions,
+		"topic": gin.H{
+			"id":   topic.ID,
+			"name": topic.Name,
+			"slug": topic.Slug,
+		},
+		"meta": gin.H{
+			"total_questions": len(questions),
+			"limit":           limit,
+			"excluded_count":  len(excludeQuestionIDs),
+		},
 	})
 }
