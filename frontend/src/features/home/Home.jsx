@@ -1,13 +1,15 @@
-import { useLoaderData } from "react-router-dom";
+import { useLoaderData, useNavigate } from "react-router-dom";
 import HomeItem from "./HomeItem";
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { setQuizzes, setDarkMode } from "./homeSlice";
+import { setQuizzes, setDarkMode, selectQuiz, selectIcon } from "./homeSlice";
+import { startRandomQuiz } from "../quiz/quizSlice";
 
 function Home() {
   const { darkMode } = useSelector((state) => state.home);
   const data = useLoaderData();
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
@@ -20,6 +22,50 @@ function Home() {
         item.title.toLowerCase().includes(searchTerm.toLowerCase())
       )
     : [];
+
+  // Handle random quiz selection
+  const handleRandomQuiz = () => {
+    console.log('🎲 Random quiz button clicked');
+    console.log('🎲 Available data:', data);
+    
+    if (data && Array.isArray(data) && data.length > 0) {
+      // Select a random topic from available topics
+      const randomIndex = Math.floor(Math.random() * data.length);
+      const randomTopic = data[randomIndex];
+      
+      console.log('🎲 Selected random topic:', randomTopic);
+      console.log('🎲 Random topic structure:', {
+        id: randomTopic.id,
+        title: randomTopic.title,
+        slug: randomTopic.slug,
+        icon: randomTopic.icon
+      });
+      
+      // Dispatch the selected quiz and icon for the home state
+      dispatch(selectQuiz(randomTopic.title));
+      dispatch(selectIcon(randomTopic.icon));
+      
+      // Start random quiz mode
+      const topicData = {
+        topic: {
+          id: randomTopic.id,
+          name: randomTopic.title,
+          slug: randomTopic.slug,
+          icon: randomTopic.icon
+        }
+      };
+      
+      console.log('🎲 Dispatching startRandomQuiz with:', topicData);
+      dispatch(startRandomQuiz(topicData));
+      
+      // Navigate to random topic with random=true query parameter
+      const navigationPath = `/${randomTopic.slug}?random=true`;
+      console.log('🎲 Navigating to:', navigationPath);
+      navigate(navigationPath);
+    } else {
+      console.error('🎲 No data available for random quiz:', { data, isArray: Array.isArray(data), length: data?.length });
+    }
+  };
 
   return (
     <div className={`min-h-screen relative overflow-hidden transition-all duration-500 ${
@@ -92,6 +138,27 @@ function Home() {
           }`}>
             💻 Test your coding knowledge with fun quizzes! 🎯
           </p>
+          
+          {/* Random Quiz Button */}
+          <div className="mb-8">
+            <button
+              onClick={handleRandomQuiz}
+              disabled={!data || !Array.isArray(data) || data.length === 0}
+              className={`inline-flex items-center gap-3 px-8 py-4 rounded-xl text-xl font-bold transform transition-all duration-300 hover:scale-105 hover:shadow-2xl focus:outline-none focus:ring-4 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 ${
+                darkMode 
+                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-purple-500/25 focus:ring-purple-400/50' 
+                  : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white shadow-blue-500/25 focus:ring-blue-400/50'
+              }`}
+              style={{
+                boxShadow: '0 10px 30px rgba(0,0,0,0.2), 0 0 0 1px rgba(255,255,255,0.1)'
+              }}
+            >
+              🎲 Random Topic
+              <svg className="w-6 h-6 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </button>
+          </div>
           
           {/* Search Bar */}
           <div className="relative inline-block mb-4">
