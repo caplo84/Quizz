@@ -22,12 +22,42 @@ export const fetchQuizBySlug = createAsyncThunk(
   }
 );
 
+export const fetchRandomQuestions = createAsyncThunk(
+  "quiz/fetchRandomQuestions",
+  async ({ topicSlug, limit = 10, excludeIds = [] }) => {
+    const excludeParam = excludeIds.length > 0 ? excludeIds.join(',') : '';
+    const response = await fetch(
+      `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/v1/topics/${topicSlug}/questions/random?limit=${limit}&exclude=${excludeParam}`
+    );
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `Failed to fetch random questions: ${response.status}`);
+    }
+    const data = await response.json();
+    
+    // Ensure we have questions
+    if (!data.data || data.data.length === 0) {
+      throw new Error(`No questions available for ${topicSlug} topic`);
+    }
+    
+    return data;
+  }
+);
+
 const initialState = {
   index: 0,
   score: 0,
   correctAnswer: "",
   chosenAnswer: "",
   questions: [],
+  // Random quiz specific state
+  isRandomQuiz: false,
+  randomTopic: null,
+  usedQuestionIds: [],
+  totalBatches: 0,
+  currentBatch: 1,
+  // Answer tracking for review
+  userAnswers: [], // Array to store user answers for review
 };
 
 const quizSlice = createSlice({
@@ -48,6 +78,40 @@ const quizSlice = createSlice({
     },
     setQuestions(state, action) {
       state.questions = action.payload;
+      // Reset user answers when new questions are loaded
+      state.userAnswers = [];
+    },
+    // Add user answer for review
+    addUserAnswer(state, action) {
+      const { questionIndex, userAnswer, correctAnswer, isCorrect } = action.payload;
+      state.userAnswers[questionIndex] = {
+        userAnswer,
+        correctAnswer,
+        isCorrect,
+        question: state.questions[questionIndex]?.question
+      };
+    },
+    // Random quiz specific actions
+    startRandomQuiz(state, action) {
+      state.isRandomQuiz = true;
+      state.randomTopic = action.payload.topic;
+      state.usedQuestionIds = [];
+      state.currentBatch = 1;
+      state.totalBatches = 1;
+      state.index = 0;
+      state.score = 0;
+      state.correctAnswer = "";
+      state.chosenAnswer = "";
+    },
+    addUsedQuestionIds(state, action) {
+      state.usedQuestionIds = [...state.usedQuestionIds, ...action.payload];
+    },
+    startNewBatch(state) {
+      state.currentBatch++;
+      state.totalBatches++;
+      state.index = 0;
+      state.correctAnswer = "";
+      state.chosenAnswer = "";
     },
     resetQuiz(state) {
       state.index = initialState.index;
@@ -55,7 +119,21 @@ const quizSlice = createSlice({
       state.correctAnswer = initialState.correctAnswer;
       state.chosenAnswer = initialState.chosenAnswer;
       state.questions = initialState.questions;
+      state.isRandomQuiz = initialState.isRandomQuiz;
+      state.randomTopic = initialState.randomTopic;
+      state.usedQuestionIds = initialState.usedQuestionIds;
+      state.totalBatches = initialState.totalBatches;
+      state.currentBatch = initialState.currentBatch;
+      state.userAnswers = initialState.userAnswers;
     },
+  },
+  extraReducers: (builder) => {
+    builder.addCase(fetchRandomQuestions.fulfilled, (state, action) => {
+      state.questions = action.payload.data;
+      // Add the new question IDs to used questions
+      const newQuestionIds = action.payload.data.map(q => q.id);
+      state.usedQuestionIds = [...state.usedQuestionIds, ...newQuestionIds];
+    });
   },
 });
 
@@ -66,6 +144,10 @@ export const {
   setQuestions,
   setChosenAnswer,
   resetQuiz,
+  startRandomQuiz,
+  addUsedQuestionIds,
+  startNewBatch,
+  addUserAnswer,
 } = quizSlice.actions;
 
 export default quizSlice.reducer;
