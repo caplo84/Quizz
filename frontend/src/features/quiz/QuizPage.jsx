@@ -1,14 +1,17 @@
 import { useDispatch, useSelector } from "react-redux";
-import { setAnswer, setChosenAnswer, setIndex, setScore } from "./quizSlice";
+import { setAnswer, setChosenAnswer, setIndex, setScore, addUserAnswer } from "./quizSlice";
 import { useEffect, useState } from "react";
 import QuizOptions from "./QuizOptions";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
-function QuizPage({ question }) {
+function QuizPage({ question, quiz }) {
   const [userAnswer, setUserAnswer] = useState("");
   const [isAnswered, setIsAnswered] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [searchParams] = useSearchParams();
+  const isRandomFromURL = searchParams.get('random') === 'true';
 
-  const { index, questions, chosenAnswer, correctAnswer, score } = useSelector(
+  const { index, questions, chosenAnswer, correctAnswer, score, isRandomQuiz, randomTopic } = useSelector(
     (state) => state.quiz,
   );
   const { darkMode } = useSelector((state) => state.home);
@@ -23,17 +26,48 @@ function QuizPage({ question }) {
   }
 
   function nextQuestion() {
-    if (userAnswer === correctAnswer) dispatch(setScore());
+    setIsTransitioning(true);
+    
+    setTimeout(() => {
+      const isCorrect = userAnswer === correctAnswer;
+      if (isCorrect) dispatch(setScore());
 
-    dispatch(setIndex(index));
-    dispatch(setChosenAnswer(""));
-    setIsAnswered(false);
+      // Track the user's answer for review
+      dispatch(addUserAnswer({
+        questionIndex: index,
+        userAnswer: userAnswer,
+        correctAnswer: correctAnswer,
+        isCorrect: isCorrect
+      }));
+
+      dispatch(setIndex(index));
+      dispatch(setChosenAnswer(""));
+      setIsAnswered(false);
+      setIsTransitioning(false);
+    }, 300); // Small delay for smooth transition
   }
 
   function finishQuiz() {
-    if (userAnswer === correctAnswer) dispatch(setScore());
+    const isCorrect = userAnswer === correctAnswer;
+    if (isCorrect) dispatch(setScore());
 
-    navigate("/finished");
+    // Track the final answer for review
+    dispatch(addUserAnswer({
+      questionIndex: index,
+      userAnswer: userAnswer,
+      correctAnswer: correctAnswer,
+      isCorrect: isCorrect
+    }));
+
+    // Check if this is a random quiz (prioritize URL parameter)
+    const isRandom = isRandomFromURL || isRandomQuiz;
+    console.log('🎯 QuizPage finishQuiz - isRandom:', isRandom, 'isRandomFromURL:', isRandomFromURL, 'isRandomQuiz:', isRandomQuiz);
+    
+    if (isRandom) {
+      navigate("/finished?random=true");
+    } else {
+      navigate("/finished");
+    }
   }
 
   const btnClass =
@@ -44,8 +78,19 @@ function QuizPage({ question }) {
   }, [question.answer, dispatch]);
 
   return (
-    <div className="grid grid-cols-2 gap-x-24 gap-y-12 desktop:grid-cols-1 desktop:gap-x-0">
+    <div className={`grid grid-cols-2 gap-x-24 gap-y-12 desktop:grid-cols-1 desktop:gap-x-0 transition-all duration-300 ${
+      isTransitioning ? 'opacity-50 scale-95' : 'opacity-100 scale-100'
+    }`}>
       <div className="flex flex-col gap-11 desktop:pb-12 mobile:gap-5 mobile:pb-4">
+        {/* Topic name for random quiz */}
+        {(isRandomFromURL || isRandomQuiz) && randomTopic && (
+          <div className={`text-[1.6rem] font-medium leading-[150%] transition-all duration-300 mobile:text-[1.2rem] ${
+            darkMode ? "text-light-bluish" : "text-purple"
+          }`}>
+            Topic: {randomTopic.name}
+          </div>
+        )}
+        
         <p
           className={`text-[2rem] italic leading-[150%] transition-all duration-300 mobile:text-[1.4rem] ${
             darkMode ? "text-light-bluish" : "text-dark-navy"
@@ -78,7 +123,7 @@ function QuizPage({ question }) {
         ></div> */}
       </div>
       <div className="space-y-10 mobile:space-y-5">
-        {question.options.map((item, index) => (
+        {(Array.isArray(question.options) ? question.options : []).map((item, index) => (
           <QuizOptions
             key={item}
             option={item}
