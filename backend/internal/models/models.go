@@ -65,6 +65,12 @@ type Question struct {
 	ExternalReference *string `json:"external_reference,omitempty" gorm:"size:500"`
 	ExternalID        *string `json:"external_id,omitempty" gorm:"size:200"`
 
+	// Code and image fields
+	QuestionCode 	   *string `json:"question_code,omitempty" gorm:"type:text"`
+	QuestionCodeLanguage *string `json:"question_code_language,omitempty" gorm:"size:50"`
+	QuestionImageURL     *string `json:"question_image_url,omitempty" gorm:"type:text"`
+	QuestionImageAlt     *string `json:"question_image_alt,omitempty" gorm:"type:text"`
+
 	// Relationships
 	Quiz    Quiz     `json:"quiz" gorm:"foreignKey:QuizID;constraint:OnDelete:CASCADE"`
 	Choices []Choice `json:"choices,omitempty" gorm:"foreignKey:QuestionID;constraint:OnDelete:CASCADE"`
@@ -78,6 +84,13 @@ type Choice struct {
 	IsCorrect   bool      `json:"is_correct" gorm:"default:false"`
 	OrderIndex  int       `json:"order_index" gorm:"not null" validate:"required,min=1"`
 	Explanation *string   `json:"explanation,omitempty" gorm:"type:text"`
+
+	// Code and image fields
+	ChoiceCode         *string `json:"choice_code,omitempty" gorm:"type:text"`
+	ChoiceCodeLanguage *string `json:"choice_code_language,omitempty" gorm:"size:50"`
+	ChoiceImageURL     *string `json:"choice_image_url,omitempty" gorm:"type:text"`
+	ChoiceImageAlt     *string `json:"choice_image_alt,omitempty" gorm:"type:text"`
+
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 

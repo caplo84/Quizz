@@ -6,6 +6,10 @@ CREATE TABLE choices (
     is_correct BOOLEAN DEFAULT false,
     order_index INTEGER NOT NULL,
     explanation TEXT,
+    choice_code TEXT,
+    choice_code_language VARCHAR(50),
+    choice_image_url TEXT,
+    choice_image_alt TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     
