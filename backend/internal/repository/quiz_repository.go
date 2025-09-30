@@ -39,6 +39,14 @@ func (r *quizRepository) GetQuizQuestions(ctx context.Context, quizID uint) ([]m
 	return questions, nil
 }
 
+func (r *quizRepository) GetAllQuestions(ctx context.Context) ([]models.Question, error) {
+	var questions []models.Question
+	if err := r.db.WithContext(ctx).Preload("Choices").Find(&questions).Error; err != nil {
+		return nil, err
+	}
+	return questions, nil
+}
+
 func (r *quizRepository) GetRandomQuestions(ctx context.Context, topicID uint, limit int, excludeQuestionIDs []uint) ([]models.Question, error) {
 	var questions []models.Question
 
