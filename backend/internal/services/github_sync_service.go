@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 	"time"
+	"regexp"
 
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -16,6 +17,8 @@ import (
 	"github.com/caplo84/quizz-backend/internal/services/datasources"
 	"github.com/caplo84/quizz-backend/pkg/utils"
 )
+
+var nonEnglishQuizFileRegex = regexp.MustCompile(`(?i)[_-][a-z]{2,3}(\\.md)?$`)
 
 // GitHubSyncService interface defines the contract for GitHub synchronization
 type GitHubSyncService interface {
@@ -154,7 +157,8 @@ func (s *GitHubSyncServiceImpl) processCategoryQuizzes(ctx context.Context, cate
 		Limit:    100, // Adjust as needed
 	}
 
-	questions, err := s.githubClient.FetchQuestions(ctx, params)
+	// Fetch questions from GitHub
+	questions, err := s.githubClient.FetchParsedQuestions(ctx, params)
 	if err != nil {
 		return fmt.Errorf("failed to fetch questions for category %s: %w", categoryName, err)
 	}
@@ -167,8 +171,12 @@ func (s *GitHubSyncServiceImpl) processCategoryQuizzes(ctx context.Context, cate
 	// Step 3: Group questions by quiz (by external reference)
 	quizGroups := s.groupQuestionsByQuiz(questions)
 
-	// Step 4: Save each quiz to database
+	// Step 4: Save each quiz to database (still filter at quiz file level for extra safety)
 	for quizIdentifier, quizQuestions := range quizGroups {
+		if !isEnglishQuizFile(quizIdentifier) {
+			log.Printf("Skipping non-English quiz file: %s", quizIdentifier)
+			continue
+		}
 		if err := s.saveQuizToDB(ctx, topic, quizIdentifier, quizQuestions); err != nil {
 			log.Printf("Error saving quiz %s: %v", quizIdentifier, err)
 			continue
@@ -176,6 +184,11 @@ func (s *GitHubSyncServiceImpl) processCategoryQuizzes(ctx context.Context, cate
 	}
 
 	return nil
+}
+
+// isEnglishQuizFile returns true if the quizIdentifier does NOT have a non-English language suffix (e.g., _fr, -de, _ua, etc.)
+func isEnglishQuizFile(quizIdentifier string) bool {
+	return !nonEnglishQuizFileRegex.MatchString(quizIdentifier)
 }
 
 func (s *GitHubSyncServiceImpl) ensureTopicExists(ctx context.Context, categoryName string) (*models.Topic, error) {
@@ -208,8 +221,8 @@ func (s *GitHubSyncServiceImpl) ensureTopicExists(ctx context.Context, categoryN
 	return newTopic, nil
 }
 
-func (s *GitHubSyncServiceImpl) groupQuestionsByQuiz(questions []datasources.Question) map[string][]datasources.Question {
-	quizGroups := make(map[string][]datasources.Question)
+func (s *GitHubSyncServiceImpl) groupQuestionsByQuiz(questions []datasources.ParsedQuestion) map[string][]datasources.ParsedQuestion {
+	quizGroups := make(map[string][]datasources.ParsedQuestion)
 
 	for _, question := range questions {
 		// Use external reference (file URL) as quiz identifier
@@ -224,7 +237,7 @@ func (s *GitHubSyncServiceImpl) groupQuestionsByQuiz(questions []datasources.Que
 	return quizGroups
 }
 
-func (s *GitHubSyncServiceImpl) saveQuizToDB(ctx context.Context, topic *models.Topic, quizIdentifier string, questions []datasources.Question) error {
+func (s *GitHubSyncServiceImpl) saveQuizToDB(ctx context.Context, topic *models.Topic, quizIdentifier string, questions []datasources.ParsedQuestion) error {
 	if len(questions) == 0 {
 		return nil
 	}
@@ -232,7 +245,12 @@ func (s *GitHubSyncServiceImpl) saveQuizToDB(ctx context.Context, topic *models.
 	// Check if quiz already exists
 	existingQuiz, err := s.quizRepo.GetQuizByExternalID(ctx, questions[0].ExternalID)
 	if err == nil && existingQuiz != nil {
-		log.Printf("Quiz already exists, skipping: %s", quizIdentifier)
+		log.Printf("Quiz already exists, checking for missing images: %s", quizIdentifier)
+		log.Printf("DEBUG: Questions count for image check: %d", len(questions))
+		// For existing quizzes, check and download any missing images
+		if err := s.downloadMissingImagesForQuestions(ctx, questions, topic.Name); err != nil {
+			log.Printf("Warning: Failed to download missing images for existing quiz %s: %v", quizIdentifier, err)
+		}
 		return nil
 	}
 
@@ -272,6 +290,11 @@ func (s *GitHubSyncServiceImpl) saveQuizToDB(ctx context.Context, topic *models.
 			Source:            stringPtr("github"),
 			ExternalReference: stringPtr(q.ExternalReference),
 			ExternalID:        stringPtr(q.ExternalID),
+			// New code and image fields
+			QuestionCode:         q.QuestionCode,
+			QuestionCodeLanguage: q.QuestionCodeLang,
+			QuestionImageURL:     q.QuestionImageURL,
+			QuestionImageAlt:     q.QuestionImageAlt,
 		}
 
 		if err := s.quizRepo.CreateQuestion(ctx, modelQuestion); err != nil {
@@ -286,6 +309,11 @@ func (s *GitHubSyncServiceImpl) saveQuizToDB(ctx context.Context, topic *models.
 				ChoiceText: choice,
 				IsCorrect:  j == q.Correct,
 				OrderIndex: j + 1,
+				// New code and image fields
+				ChoiceCode:         getStringAtIndex(q.ChoiceCodes, j),
+				ChoiceCodeLanguage: getStringAtIndex(q.ChoiceCodeLangs, j),
+				ChoiceImageURL:     getStringAtIndex(q.ChoiceImageURLs, j),
+				ChoiceImageAlt:     getStringAtIndex(q.ChoiceImageAlts, j),
 			}
 
 			if err := s.quizRepo.CreateChoice(ctx, modelChoice); err != nil {
@@ -298,7 +326,7 @@ func (s *GitHubSyncServiceImpl) saveQuizToDB(ctx context.Context, topic *models.
 	return nil
 }
 
-func (s *GitHubSyncServiceImpl) generateQuizTitle(firstQuestion datasources.Question, identifier string) string {
+func (s *GitHubSyncServiceImpl) generateQuizTitle(firstQuestion datasources.ParsedQuestion, identifier string) string {
 	// Extract filename from identifier (GitHub file path)
 	// Remove query parameters first (e.g., ?ref=main)
 	cleanIdentifier := strings.Split(identifier, "?")[0]
@@ -519,6 +547,43 @@ func (s *GitHubSyncServiceImpl) cleanupCategoryName(categoryName string) string 
 	}
 
 	return strings.Join(words, " ")
+}
+
+// downloadMissingImagesForQuestions downloads images for questions if they don't exist locally
+func (s *GitHubSyncServiceImpl) downloadMissingImagesForQuestions(ctx context.Context, questions []datasources.ParsedQuestion, topicName string) error {
+	log.Printf("DEBUG: downloadMissingImagesForQuestions called with %d questions for topic %s", len(questions), topicName)
+	
+	for i, question := range questions {
+		log.Printf("DEBUG: Checking question %d for images", i+1)
+		
+		// Check question image
+		if question.QuestionImageURL != nil && *question.QuestionImageURL != "" {
+			log.Printf("DEBUG: Found question image URL: %s", *question.QuestionImageURL)
+			if err := s.githubClient.DownloadImage(ctx, *question.QuestionImageURL, topicName); err != nil {
+				log.Printf("Warning: Failed to download question image %s: %v", *question.QuestionImageURL, err)
+			}
+		}
+
+		// Check choice images
+		for j, imageURL := range question.ChoiceImageURLs {
+			if imageURL != nil && *imageURL != "" {
+				log.Printf("DEBUG: Found choice image URL: %s (choice %d)", *imageURL, j)
+				if err := s.githubClient.DownloadImage(ctx, *imageURL, topicName); err != nil {
+					log.Printf("Warning: Failed to download choice image %s (index %d): %v", *imageURL, j, err)
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// getStringAtIndex safely gets a string pointer from an array at the given index
+// Returns nil if index is out of bounds or the value at index is nil
+func getStringAtIndex(arr []*string, index int) *string {
+	if index < 0 || index >= len(arr) {
+		return nil
+	}
+	return arr[index]
 }
 
 // Helper functions
