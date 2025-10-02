@@ -134,3 +134,19 @@ func (h *AdminHandler) GetGitHubSyncStatus(c *gin.Context) {
 		"last_sync":  "implement this", // You can track this in database
 	})
 }
+
+// DownloadAllTopicImages handles POST /admin/download-all-topic-images  
+func (h *AdminHandler) DownloadAllTopicImages(c *gin.Context) {
+	err := h.adminService.DownloadAllTopicImages(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to download topic images",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "All topic images download completed successfully",
+	})
+}

@@ -246,12 +246,15 @@ func (app *Application) setupRouter() *gin.Engine {
 	attemptService := services.NewAttemptService(attemptRepo, quizService, app.Cache)
 	attemptHandler := handlers.NewAttemptHandler(attemptService, quizService)
 
-	adminService := services.NewAdminService(quizRepo, app.Cache)
+	adminService := services.NewAdminService(quizRepo, app.Cache, githubClient, topicRepo)
 
 	// Create GitHub sync service
 	githubSyncService := services.NewGitHubSyncService(githubClient, quizRepo, topicRepo)
 
 	adminHandler := handlers.NewAdminHandler(adminService, githubSyncService)
+
+	// Serve static files for quiz images
+	router.Static("/static", "./static")
 
 	// API v1 routes
 	v1 := router.Group("/api/v1")
@@ -281,6 +284,7 @@ func (app *Application) setupRouter() *gin.Engine {
 	{
 		adminRoutes.POST("/sync/github", adminHandler.SyncGitHubData)
 		adminRoutes.GET("/sync/github/status", adminHandler.GetGitHubSyncStatus)
+		adminRoutes.POST("/download-all-topic-images", adminHandler.DownloadAllTopicImages)
 	}
 
 	router.GET("/health", healthHandler.HealthCheck)
