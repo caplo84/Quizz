@@ -147,26 +147,30 @@ func (g *GitHubClient) FetchCategories(ctx context.Context) ([]Category, error) 
 }
 
 // DownloadImage downloads an image from GitHub and saves it locally
-func (g *GitHubClient) DownloadImage(ctx context.Context, imageURL, topic string) error {
+// Returns the standardized filename that should be stored in database
+func (g *GitHubClient) DownloadImage(ctx context.Context, imageURL, topic string) (string, error) {
 	if imageURL == "" {
-		return nil
+		return "", nil
 	}
 
 	// Create images directory in backend static folder
 	imageDir := filepath.Join("static", "quiz-images")
 	if err := os.MkdirAll(imageDir, 0755); err != nil {
-		return fmt.Errorf("failed to create image directory: %w", err)
+		return "", fmt.Errorf("failed to create image directory: %w", err)
 	}
 
-	// Extract filename from imageURL (e.g., "image/04.jpeg" -> "04.jpeg")
-	filename := filepath.Base(imageURL)
+	// Standardized filename generation: Create consistent naming
+	// Format: {topic}_{original_filename} 
+	// Example: "android_04.jpeg", "css_Q-141.png"
+	originalFilename := filepath.Base(imageURL)
+	filename := fmt.Sprintf("%s_%s", topic, originalFilename)
 	localFilePath := filepath.Join(imageDir, filename)
 
 	// Check if file already exists
 	if _, err := os.Stat(localFilePath); err == nil {
 		// File already exists, no need to download
 		fmt.Printf("Image already exists: %s\n", localFilePath)
-		return nil
+		return filename, nil // Return standardized filename
 	}
 
 	// Construct GitHub raw URL
@@ -188,29 +192,29 @@ func (g *GitHubClient) DownloadImage(ctx context.Context, imageURL, topic string
 	// Download the image
 	resp, err := http.Get(rawURL)
 	if err != nil {
-		return fmt.Errorf("failed to download image from %s: %w", rawURL, err)
+		return "", fmt.Errorf("failed to download image from %s: %w", rawURL, err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("failed to download image: HTTP %d from %s", resp.StatusCode, rawURL)
+		return "", fmt.Errorf("failed to download image: HTTP %d from %s", resp.StatusCode, rawURL)
 	}
 
 	// Create the local file
 	out, err := os.Create(localFilePath)
 	if err != nil {
-		return fmt.Errorf("failed to create local image file: %w", err)
+		return "", fmt.Errorf("failed to create local image file: %w", err)
 	}
 	defer out.Close()
 
 	// Copy the image data
 	_, err = io.Copy(out, resp.Body)
 	if err != nil {
-		return fmt.Errorf("failed to save image data: %w", err)
+		return "", fmt.Errorf("failed to save image data: %w", err)
 	}
 
 	fmt.Printf("Successfully downloaded image: %s -> %s\n", rawURL, localFilePath)
-	return nil
+	return filename, nil // Return standardized filename for database storage
 }
 
 // ListImageFiles gets all image files from a specific folder in the repository
@@ -464,11 +468,6 @@ func (g *GitHubClient) parseMarkdownQuiz(file GitHubFile) (*ParsedQuiz, error) {
 
 	ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
 		if entering {
-			// Debug all nodes for Q36
-			if currentQuestion != nil && strings.Contains(currentQuestion.Text, "Which code snippet would achieve the layout displayed below") {
-				fmt.Printf("🔍 Q36 DEBUG - AST Node Type: %T\n", n)
-			}
-			
 			switch node := n.(type) {
 			case *ast.Heading:
 				if node.Level == 1 {
@@ -496,9 +495,12 @@ func (g *GitHubClient) parseMarkdownQuiz(file GitHubFile) (*ParsedQuiz, error) {
 						currentQuestion.QuestionImageURL = &imageURL
 						currentQuestion.QuestionImageAlt = &imageAlt
 						
-						// Download the image to local storage
-						if err := g.DownloadImage(context.Background(), imageURL, quiz.Category); err != nil {
+						// Download the image to local storage and get standardized filename
+						if standardizedFilename, err := g.DownloadImage(context.Background(), imageURL, quiz.Category); err != nil {
 							fmt.Printf("Warning: Failed to download question image %s: %v\n", imageURL, err)
+						} else if standardizedFilename != "" {
+							// Update with standardized filename for database storage
+							currentQuestion.QuestionImageURL = &standardizedFilename
 						}
 					}
 
@@ -533,14 +535,18 @@ func (g *GitHubClient) parseMarkdownQuiz(file GitHubFile) (*ParsedQuiz, error) {
 						
 						// Only set if we don't already have an image
 						if currentQuestion.QuestionImageURL == nil {
-							currentQuestion.QuestionImageURL = &imageURL
-							if imageAlt != "" {
-								currentQuestion.QuestionImageAlt = &imageAlt
+							// Download the image to local storage and get standardized filename
+							if standardizedFilename, err := g.DownloadImage(context.Background(), imageURL, quiz.Category); err != nil {
+								fmt.Printf("Warning: Failed to download question image %s: %v\n", imageURL, err)
+								// Fallback to original URL
+								currentQuestion.QuestionImageURL = &imageURL
+							} else if standardizedFilename != "" {
+								// Use standardized filename for database storage
+								currentQuestion.QuestionImageURL = &standardizedFilename
 							}
 							
-							// Download the image to local storage
-							if err := g.DownloadImage(context.Background(), imageURL, quiz.Category); err != nil {
-								fmt.Printf("Warning: Failed to download question image %s: %v\n", imageURL, err)
+							if imageAlt != "" {
+								currentQuestion.QuestionImageAlt = &imageAlt
 							}
 						}
 					}
@@ -587,13 +593,16 @@ func (g *GitHubClient) parseMarkdownQuiz(file GitHubFile) (*ParsedQuiz, error) {
 						
 						// Only set if we don't already have an image from the question text
 						if currentQuestion.QuestionImageURL == nil {
-							currentQuestion.QuestionImageURL = &imageURL
-							currentQuestion.QuestionImageAlt = &imageAlt
-							
-							// Download the image to local storage
-							if err := g.DownloadImage(context.Background(), imageURL, quiz.Category); err != nil {
+							// Download the image to local storage and get standardized filename
+							if standardizedFilename, err := g.DownloadImage(context.Background(), imageURL, quiz.Category); err != nil {
 								fmt.Printf("Warning: Failed to download question image %s: %v\n", imageURL, err)
+								// Fallback to original URL
+								currentQuestion.QuestionImageURL = &imageURL
+							} else if standardizedFilename != "" {
+								// Use standardized filename for database storage
+								currentQuestion.QuestionImageURL = &standardizedFilename
 							}
+							currentQuestion.QuestionImageAlt = &imageAlt
 						}
 						
 						// If there's remaining text after removing the image, append it to the question
@@ -610,13 +619,6 @@ func (g *GitHubClient) parseMarkdownQuiz(file GitHubFile) (*ParsedQuiz, error) {
 				if currentQuestion != nil && len(currentQuestion.Choices) == 0 {
 					// Only process the first list for each question
 					choices, correct, choiceCodes, choiceCodeLangs, choiceImageURLs, choiceImageAlts := g.extractChoicesFromList(node, string(source), quiz.Category)
-					
-					// Debug logging for Q36
-					if strings.Contains(currentQuestion.Text, "layout displayed below") {
-						fmt.Printf("DEBUG Q36: Found %d choices: %v\n", len(choices), choices)
-						fmt.Printf("DEBUG Q36: Question text: %s\n", currentQuestion.Text)
-						fmt.Printf("DEBUG Q36: Question image URL: %v\n", currentQuestion.QuestionImageURL)
-					}
 					
 					currentQuestion.Choices = choices
 					currentQuestion.Correct = correct
@@ -699,9 +701,13 @@ func (g *GitHubClient) extractChoicesFromList(list *ast.List, source string, cat
                 choiceImageAlt = &imageAlt
                 itemText = cleanText
                 
-                // Download the choice image to local storage
-                if err := g.DownloadImage(context.Background(), imageURL, category); err != nil {
+                // Download the choice image to local storage and get standardized filename
+                if standardizedFilename, err := g.DownloadImage(context.Background(), imageURL, category); err != nil {
                     fmt.Printf("Warning: Failed to download choice image %s: %v\n", imageURL, err)
+                    // Keep original URL as fallback
+                } else if standardizedFilename != "" {
+                    // Update with standardized filename for database storage
+                    choiceImageURL = &standardizedFilename
                 }
             }
 
@@ -812,9 +818,13 @@ func (g *GitHubClient) extractChoicesFromList(list *ast.List, source string, cat
                         choiceImageAlt = &imageAlt
                         itemText = cleanText
                         
-                        // Download the choice image to local storage
-                        if err := g.DownloadImage(context.Background(), imageURL, category); err != nil {
+                        // Download the choice image to local storage and get standardized filename
+                        if standardizedFilename, err := g.DownloadImage(context.Background(), imageURL, category); err != nil {
                             fmt.Printf("Warning: Failed to download choice image %s: %v\n", imageURL, err)
+                            // Keep original URL as fallback
+                        } else if standardizedFilename != "" {
+                            // Update with standardized filename for database storage
+                            choiceImageURL = &standardizedFilename
                         }
                     }
 

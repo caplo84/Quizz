@@ -246,7 +246,6 @@ func (s *GitHubSyncServiceImpl) saveQuizToDB(ctx context.Context, topic *models.
 	existingQuiz, err := s.quizRepo.GetQuizByExternalID(ctx, questions[0].ExternalID)
 	if err == nil && existingQuiz != nil {
 		log.Printf("Quiz already exists, checking for missing images: %s", quizIdentifier)
-		log.Printf("DEBUG: Questions count for image check: %d", len(questions))
 		// For existing quizzes, check and download any missing images
 		if err := s.downloadMissingImagesForQuestions(ctx, questions, topic.Name); err != nil {
 			log.Printf("Warning: Failed to download missing images for existing quiz %s: %v", quizIdentifier, err)
@@ -559,8 +558,10 @@ func (s *GitHubSyncServiceImpl) downloadMissingImagesForQuestions(ctx context.Co
 		// Check question image
 		if question.QuestionImageURL != nil && *question.QuestionImageURL != "" {
 			log.Printf("DEBUG: Found question image URL: %s", *question.QuestionImageURL)
-			if err := s.githubClient.DownloadImage(ctx, *question.QuestionImageURL, topicName); err != nil {
+			if standardizedFilename, err := s.githubClient.DownloadImage(ctx, *question.QuestionImageURL, topicName); err != nil {
 				log.Printf("Warning: Failed to download question image %s: %v", *question.QuestionImageURL, err)
+			} else if standardizedFilename != "" {
+				log.Printf("DEBUG: Downloaded question image as: %s", standardizedFilename)
 			}
 		}
 
@@ -568,8 +569,10 @@ func (s *GitHubSyncServiceImpl) downloadMissingImagesForQuestions(ctx context.Co
 		for j, imageURL := range question.ChoiceImageURLs {
 			if imageURL != nil && *imageURL != "" {
 				log.Printf("DEBUG: Found choice image URL: %s (choice %d)", *imageURL, j)
-				if err := s.githubClient.DownloadImage(ctx, *imageURL, topicName); err != nil {
+				if standardizedFilename, err := s.githubClient.DownloadImage(ctx, *imageURL, topicName); err != nil {
 					log.Printf("Warning: Failed to download choice image %s (index %d): %v", *imageURL, j, err)
+				} else if standardizedFilename != "" {
+					log.Printf("DEBUG: Downloaded choice image as: %s", standardizedFilename)
 				}
 			}
 		}
