@@ -24,17 +24,10 @@ function Quiz() {
         setLoading(true);
         setError(null);
         
-        console.log('🔄 Loading quiz for topic:', type);
-        console.log('🎲 URL isRandomQuiz:', isRandomQuiz);
-        console.log('🎲 Store isRandomQuiz:', storeIsRandomQuiz);
-        console.log('🎲 Random topic from store:', randomTopic);
-        console.log('🎲 Current batch:', currentBatch);
-        console.log('🎲 Used question IDs:', usedQuestionIds);
+
         
         if (isRandomQuiz && storeIsRandomQuiz && randomTopic) {
           // For random quiz, only reset question-specific state
-          console.log('🎲 Loading random questions for topic:', randomTopic.slug);
-          console.log('🎲 Current batch:', currentBatch, 'Used question IDs:', usedQuestionIds);
           try {
             const result = await dispatch(fetchRandomQuestions({
               topicSlug: randomTopic.slug,
@@ -49,12 +42,26 @@ function Quiz() {
             }
             
             // Transform questions to match expected format
-            const transformedQuestions = result.data.map(q => ({
-              id: q.id,
-              question: q.question_text || q.text || q.question,
-              options: q.choices?.map(choice => choice.choice_text || choice.text || choice.option) || q.options || [],
-              answer: q.choices?.find(choice => choice.is_correct)?.choice_text || q.answer
-            }));
+            const transformedQuestions = result.data.map((q, index) => {
+              try {
+                return {
+                  id: q.id,
+                  question: q.question_text || q.text || q.question,
+                  options: q.choices?.map(choice => choice.choice_text || choice.text || choice.option) || q.options || [],
+                  answer: q.choices?.find(choice => choice.is_correct)?.choice_text || q.answer,
+                  // Content separation fields
+                  question_image_url: q.question_image_url,
+                  question_image_alt: q.question_image_alt,
+                  question_code: q.question_code,
+                  question_code_language: q.question_code_language,
+                  choice_codes: q.choices?.map(choice => choice.choice_code) || [],
+                  choice_code_languages: q.choices?.map(choice => choice.choice_code_language) || []
+                };
+              } catch (error) {
+                console.error(`Error transforming question ${index}:`, error, q);
+                throw error;
+              }
+            });
             
             dispatch(setQuestions(transformedQuestions));
             
@@ -67,7 +74,7 @@ function Quiz() {
             });
             
           } catch (randomError) {
-            console.error('� Failed to load random questions:', randomError);
+            console.error('Failed to load random questions:', randomError);
             setError(randomError.message || 'Failed to load random questions');
           }
         } else {
@@ -75,12 +82,10 @@ function Quiz() {
           dispatch(resetQuiz());
           
           // For regular topic selection, ALSO use random questions API
-          console.log('📋 Loading random questions for selected topic:', type);
           
           // First get topic info to get topic data
           try {
             const topicQuizzes = await topicsApi.getQuizzes(type);
-            console.log('📋 Topic quizzes:', topicQuizzes);
             
             if (!topicQuizzes || topicQuizzes.length === 0) {
               setError(`No quizzes available for ${type} topic yet. Check back later!`);
@@ -109,7 +114,14 @@ function Quiz() {
               id: q.id,
               question: q.question_text || q.text || q.question,
               options: q.choices?.map(choice => choice.choice_text || choice.text || choice.option) || q.options || [],
-              answer: q.choices?.find(choice => choice.is_correct)?.choice_text || q.answer
+              answer: q.choices?.find(choice => choice.is_correct)?.choice_text || q.answer,
+              // Content separation fields
+              question_image_url: q.question_image_url,
+              question_image_alt: q.question_image_alt,
+              question_code: q.question_code,
+              question_code_language: q.question_code_language,
+              choice_codes: q.choices?.map(choice => choice.choice_code) || [],
+              choice_code_languages: q.choices?.map(choice => choice.choice_code_language) || []
             }));
             
             dispatch(setQuestions(transformedQuestions));
@@ -127,13 +139,13 @@ function Quiz() {
             });
             
           } catch (error) {
-            console.error('💥 Failed to load questions for topic:', error);
+            console.error('Failed to load questions for topic:', error);
             setError(error.message || 'Failed to load questions');
           }
         }
         
       } catch (error) {
-        console.error('💥 Failed to load quiz:', error);
+        console.error('Failed to load quiz:', error);
         setError(error.message);
       } finally {
         setLoading(false);

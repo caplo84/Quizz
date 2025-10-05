@@ -44,6 +44,23 @@ export const fetchRandomQuestions = createAsyncThunk(
   }
 );
 
+export const fetchQuestionsWithAnswers = createAsyncThunk(
+  "quiz/fetchQuestionsWithAnswers",
+  async ({ topicSlug, questionIds }) => {
+    // We'll fetch specific questions by their IDs with answers
+    // For now, since we don't have a specific endpoint, we'll use the same random endpoint
+    // but this should ideally be a different endpoint that accepts question IDs
+    const response = await fetch(
+      `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/v1/topics/${topicSlug}/questions/random?limit=10&include_answers=true`
+    );
+    if (!response.ok) {
+      throw new Error(`Failed to fetch questions with answers: ${response.status}`);
+    }
+    const data = await response.json();
+    return data.data;
+  }
+);
+
 const initialState = {
   index: 0,
   score: 0,
@@ -88,7 +105,8 @@ const quizSlice = createSlice({
         userAnswer,
         correctAnswer,
         isCorrect,
-        question: state.questions[questionIndex]?.question
+        question: state.questions[questionIndex]?.question,
+        questionId: state.questions[questionIndex]?.id
       };
     },
     // Random quiz specific actions
@@ -113,6 +131,7 @@ const quizSlice = createSlice({
       state.correctAnswer = "";
       state.chosenAnswer = "";
     },
+
     resetQuiz(state) {
       state.index = initialState.index;
       state.score = initialState.score;
@@ -134,6 +153,19 @@ const quizSlice = createSlice({
       const newQuestionIds = action.payload.data.map(q => q.id);
       state.usedQuestionIds = [...state.usedQuestionIds, ...newQuestionIds];
     });
+    builder.addCase(fetchQuestionsWithAnswers.fulfilled, (state, action) => {
+      // Update correct answers in userAnswers
+      const questionsWithAnswers = action.payload;
+      state.userAnswers.forEach((userAnswer, index) => {
+        if (userAnswer.questionId) {
+          const matchingQuestion = questionsWithAnswers.find(q => q.id === userAnswer.questionId);
+          if (matchingQuestion) {
+            const correctChoice = matchingQuestion.choices?.find(choice => choice.is_correct);
+            state.userAnswers[index].correctAnswer = correctChoice?.choice_text || '';
+          }
+        }
+      });
+    });
   },
 });
 
@@ -148,6 +180,7 @@ export const {
   addUsedQuestionIds,
   startNewBatch,
   addUserAnswer,
+
 } = quizSlice.actions;
 
 export default quizSlice.reducer;

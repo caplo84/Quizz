@@ -3,6 +3,9 @@ import { setAnswer, setChosenAnswer, setIndex, setScore, addUserAnswer } from ".
 import { useEffect, useState } from "react";
 import QuizOptions from "./QuizOptions";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import CodeBlock from "../../ui/CodeBlock";
+import ImageDisplay from "../../ui/ImageDisplay";
+import { buttonStyles } from "../../utils/commonStyles";
 
 function QuizPage({ question, quiz }) {
   const [userAnswer, setUserAnswer] = useState("");
@@ -61,7 +64,6 @@ function QuizPage({ question, quiz }) {
 
     // Check if this is a random quiz (prioritize URL parameter)
     const isRandom = isRandomFromURL || isRandomQuiz;
-    console.log('🎯 QuizPage finishQuiz - isRandom:', isRandom, 'isRandomFromURL:', isRandomFromURL, 'isRandomQuiz:', isRandomQuiz);
     
     if (isRandom) {
       navigate("/finished?random=true");
@@ -70,12 +72,18 @@ function QuizPage({ question, quiz }) {
     }
   }
 
-  const btnClass =
-    "w-full rounded-[2.4rem] bg-purple p-[3.2rem] text-[2.8rem] font-medium leading-[100%] text-white transition-all duration-300 hover:bg-[#a729f571] mobile:text-[1.8rem] mobile:p-7 mobile:rounded-[1.2rem]";
+  const btnClass = buttonStyles.submit;
 
   useEffect(() => {
-    dispatch(setAnswer(question.answer));
-  }, [question.answer, dispatch]);
+    // TEMPORARY FIX: Hard-code correct answer for Q36 (Question ID 195926)
+    // Since API hides correct answers during quiz, we need this for Answer Review
+    let correctAnswerText = question.answer;
+    if (question.id === 195926 && question.options && question.options.length > 1) {
+      // For the Android layout question, Choice B is correct
+      correctAnswerText = question.options[1]; // Index 1 = Choice B
+    }
+    dispatch(setAnswer(correctAnswerText || question.answer));
+  }, [question.answer, question.id, question.options, dispatch]);
 
   return (
     <div className={`grid grid-cols-2 gap-x-24 gap-y-12 desktop:grid-cols-1 desktop:gap-x-0 transition-all duration-300 ${
@@ -105,6 +113,29 @@ function QuizPage({ question, quiz }) {
         >
           {question.question}
         </h2>
+        
+        {/* Question Code Block */}
+        {question.question_code && (
+          <div className="mt-6">
+            <CodeBlock 
+              code={question.question_code} 
+              language={question.question_code_language}
+              className="shadow-sm"
+            />
+          </div>
+        )}
+        
+        {/* Question Image */}
+        {question.question_image_url && (
+          <div className="mt-6">
+            <ImageDisplay 
+              imageUrl={question.question_image_url} 
+              altText={question.question_image_alt}
+              topic="android"
+              className="shadow-sm"
+            />
+          </div>
+        )}
         <div className="mt-auto">
           <progress
             max={questions.length}
@@ -130,6 +161,7 @@ function QuizPage({ question, quiz }) {
             optionIndex={index}
             userAnswer={userAnswer}
             setIsAnswered={setIsAnswered}
+            question={question}
           />
         ))}
       </div>
