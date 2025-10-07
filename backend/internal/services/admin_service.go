@@ -93,11 +93,11 @@ func (s *adminService) DownloadAllTopicImages(ctx context.Context) error {
 				fullPath := fmt.Sprintf("%s/%s", folder, imageFile)
 				log.Printf("📥 Downloading: %s", fullPath)
 				
-				if err := s.githubClient.DownloadImage(ctx, fullPath, topic); err != nil {
+				if standardizedFilename, err := s.githubClient.DownloadImage(ctx, fullPath, topic); err != nil {
 					log.Printf("⚠️  Failed to download %s: %v", fullPath, err)
 					errorCount++
 				} else {
-					log.Printf("✅ Downloaded: %s", imageFile)
+					log.Printf("✅ Downloaded: %s -> %s", imageFile, standardizedFilename)
 					downloadCount++
 				}
 			}

@@ -264,6 +264,7 @@ func (app *Application) setupRouter() *gin.Engine {
 
 		v1.GET("/topics/:topic/quizzes", quizHandler.GetQuizzes)
 		v1.GET("/topics/:topic/questions/random", quizHandler.GetRandomQuestions)
+		v1.GET("/questions/by-ids", quizHandler.GetQuestionsByIDs) // New endpoint
 		v1.GET("/quizzes/:slug", quizHandler.GetQuizBySlug)
 		v1.GET("/quizzes/:slug/questions", quizHandler.GetQuizQuestions)
 

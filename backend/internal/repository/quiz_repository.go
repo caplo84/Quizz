@@ -69,6 +69,22 @@ func (r *quizRepository) GetRandomQuestions(ctx context.Context, topicID uint, l
 	return questions, nil
 }
 
+func (r *quizRepository) GetQuestionsByIDs(ctx context.Context, questionIDs []uint) ([]models.Question, error) {
+	var questions []models.Question
+
+	// Find questions by IDs with their choices
+	err := r.db.WithContext(ctx).
+		Preload("Choices").
+		Where("id IN ? AND is_active = ?", questionIDs, true).
+		Find(&questions).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return questions, nil
+}
+
 func (r *quizRepository) CreateQuiz(ctx context.Context, quiz *models.Quiz) error {
 	return r.db.WithContext(ctx).Create(quiz).Error
 }

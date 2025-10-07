@@ -97,10 +97,15 @@ func (h *QuizHandler) GetQuizQuestions(c *gin.Context) {
 		return
 	}
 
-	// Remove correct answers from response
-	for i := range questions {
-		for j := range questions[i].Choices {
-			questions[i].Choices[j].IsCorrect = false
+	// Check if client wants to include correct answers (for review page)
+	includeAnswers := c.Query("include_answers") == "true"
+	
+	if !includeAnswers {
+		// Remove correct answers from response for quiz play
+		for i := range questions {
+			for j := range questions[i].Choices {
+				questions[i].Choices[j].IsCorrect = false
+			}
 		}
 	}
 
@@ -149,10 +154,15 @@ func (h *QuizHandler) GetRandomQuestions(c *gin.Context) {
 		return
 	}
 
-	// Remove correct answers from response
-	for i := range questions {
-		for j := range questions[i].Choices {
-			questions[i].Choices[j].IsCorrect = false
+	// Check if client wants to include correct answers (for review page)
+	includeAnswers := c.Query("include_answers") == "true"
+	
+	if !includeAnswers {
+		// Remove correct answers from response for quiz play
+		for i := range questions {
+			for j := range questions[i].Choices {
+				questions[i].Choices[j].IsCorrect = false
+			}
 		}
 	}
 
@@ -168,5 +178,56 @@ func (h *QuizHandler) GetRandomQuestions(c *gin.Context) {
 			"limit":           limit,
 			"excluded_count":  len(excludeQuestionIDs),
 		},
+	})
+}
+
+// GetQuestionsByIDs handles GET /questions/by-ids?ids=1,2,3&include_answers=true
+func (h *QuizHandler) GetQuestionsByIDs(c *gin.Context) {
+	// Parse IDs parameter (comma-separated question IDs)
+	idsParam := c.Query("ids")
+	if idsParam == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "ids parameter is required",
+		})
+		return
+	}
+
+	var questionIDs []uint
+	idStrings := strings.Split(idsParam, ",")
+	for _, idStr := range idStrings {
+		if id, err := strconv.ParseUint(strings.TrimSpace(idStr), 10, 32); err == nil {
+			questionIDs = append(questionIDs, uint(id))
+		}
+	}
+
+	if len(questionIDs) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "No valid question IDs provided",
+		})
+		return
+	}
+
+	questions, err := h.quizService.GetQuestionsByIDs(c.Request.Context(), questionIDs)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to fetch questions",
+		})
+		return
+	}
+
+	// Check if client wants to include correct answers (for review page)
+	includeAnswers := c.Query("include_answers") == "true"
+	
+	if !includeAnswers {
+		// Remove correct answers from response for quiz play
+		for i := range questions {
+			for j := range questions[i].Choices {
+				questions[i].Choices[j].IsCorrect = false
+			}
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data": questions,
 	})
 }

@@ -20,6 +20,7 @@ type QuizRepository interface {
 	GetQuizQuestions(ctx context.Context, quizID uint) ([]models.Question, error)
 	GetAllQuestions(ctx context.Context) ([]models.Question, error)
 	GetRandomQuestions(ctx context.Context, topicID uint, limit int, excludeQuestionIDs []uint) ([]models.Question, error)
+	GetQuestionsByIDs(ctx context.Context, questionIDs []uint) ([]models.Question, error)
 	Create(ctx context.Context, quiz *models.Quiz) error
 	CreateQuiz(ctx context.Context, quiz *models.Quiz) error
 	CreateQuestion(ctx context.Context, question *models.Question) error

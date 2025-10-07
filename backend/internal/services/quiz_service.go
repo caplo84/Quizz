@@ -19,6 +19,7 @@ type QuizService interface {
 	GetQuizByID(ctx context.Context, id uint) (*models.Quiz, error)
 	GetQuizQuestions(ctx context.Context, quizID uint) ([]models.Question, error)
 	GetRandomQuestions(ctx context.Context, topicID uint, limit int, excludeQuestionIDs []uint) ([]models.Question, error)
+	GetQuestionsByIDs(ctx context.Context, questionIDs []uint) ([]models.Question, error)
 	CreateQuiz(ctx context.Context, quiz *models.Quiz) error
 	UpdateQuiz(ctx context.Context, quiz *models.Quiz) error
 	DeleteQuiz(ctx context.Context, id uint) error
@@ -165,6 +166,33 @@ func (s *quizService) GetRandomQuestions(ctx context.Context, topicID uint, limi
 		"question_count": len(questions),
 		"duration_ms":    time.Since(start).Milliseconds(),
 	}).Info("Random questions retrieved successfully")
+
+	return questions, nil
+}
+
+func (s *quizService) GetQuestionsByIDs(ctx context.Context, questionIDs []uint) ([]models.Question, error) {
+	start := time.Now()
+
+	logger.Log.WithContext(ctx).WithFields(logger.Fields{
+		"operation":    "get_questions_by_ids",
+		"question_ids": questionIDs,
+	}).Debug("Starting questions retrieval by IDs")
+
+	questions, err := s.repo.GetQuestionsByIDs(ctx, questionIDs)
+	if err != nil {
+		logger.Log.WithContext(ctx).WithError(err).WithFields(logger.Fields{
+			"operation":    "get_questions_by_ids",
+			"question_ids": questionIDs,
+		}).Error("Failed to retrieve questions by IDs")
+		return nil, err
+	}
+
+	logger.Log.WithContext(ctx).WithFields(logger.Fields{
+		"operation":      "get_questions_by_ids",
+		"question_ids":   questionIDs,
+		"question_count": len(questions),
+		"duration_ms":    time.Since(start).Milliseconds(),
+	}).Info("Questions by IDs retrieved successfully")
 
 	return questions, nil
 }
