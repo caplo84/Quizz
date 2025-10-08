@@ -6,6 +6,7 @@ import Quiz from "./features/quiz/Quiz";
 import Error from "./ui/Error";
 import FinishedScreen from "./ui/FinishedScreen";
 import ConnectionStatus from "./ui/ConnectionStatus";
+import TestImageDisplay from './components/TestImageDisplay';
 
 function App() {
   const router = createBrowserRouter([
@@ -26,6 +27,10 @@ function App() {
         {
           path: "/finished",
           element: <FinishedScreen />,
+        },
+        {
+          path: "/test-images",
+          element: <TestImageDisplay />,
         },
       ],
     },

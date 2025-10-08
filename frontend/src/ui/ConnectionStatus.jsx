@@ -7,14 +7,11 @@ function ConnectionStatus() {
 
   useEffect(() => {
     const checkConnection = async () => {
-      console.log('🔍 Checking connection...'); // DEBUG
       try {
         setIsLoading(true);
         const result = await healthApi.check();
-        console.log('✅ Health check response:', result); // DEBUG
         setIsConnected(true);
       } catch (error) {
-        console.error('❌ Health check failed:', error); // DEBUG
         setIsConnected(false);
       } finally {
         setIsLoading(false);
@@ -26,8 +23,6 @@ function ConnectionStatus() {
     
     return () => clearInterval(interval);
   }, []);
-
-  console.log('🎯 ConnectionStatus state:', { isConnected, isLoading }); // DEBUG
 
   if (isLoading) {
     return (

@@ -14,7 +14,6 @@ async function apiRequest(endpoint, options = {}) {
   };
 
   try {
-    console.log('🌐 Making API request to:', url);
     const response = await fetch(url, config);
     
     if (!response.ok) {
@@ -23,7 +22,6 @@ async function apiRequest(endpoint, options = {}) {
     }
     
     const result = await response.json();
-    console.log('📡 API response:', result);
     
     // Backend returns data wrapped in {success: true, data: [...]}
     if (result.success && result.data) {
@@ -84,19 +82,13 @@ export const api = {
 // Legacy function for backward compatibility
 export async function getQuiz() {
   try {
-    console.log('🔄 Fetching data from backend API...');
-    console.log('🔗 API_BASE_URL:', API_BASE_URL);
-    
     const topics = await api.getTopics();
-    console.log('📂 Raw topics response:', topics);
-    console.log('📂 Topics type:', typeof topics, 'Array?', Array.isArray(topics));
     
     // Handle different possible response structures
     let topicsArray = topics;
     if (topics && topics.data && Array.isArray(topics.data)) {
       topicsArray = topics.data;
     } else if (!Array.isArray(topics)) {
-      console.warn('⚠️ Topics is not an array:', topics);
       topicsArray = [];
     }
     
@@ -106,7 +98,6 @@ export async function getQuiz() {
     
     if (topicsArray && topicsArray.length > 0) {
       for (const topic of topicsArray) {
-        console.log('🏷️ Processing topic:', topic);
         
         // Determine source - if has icon_url, it's original manual data, otherwise GitHub
         const source = topic.icon_url ? 'manual' : 'github';
@@ -122,7 +113,6 @@ export async function getQuiz() {
             quizCount = topicQuizzes.length;
           }
         } catch (error) {
-          console.warn(`⚠️ Could not fetch quizzes for topic ${topic.name}:`, error);
           // For original topics (manual), assume they have quizzes even if API fails
           if (source === 'manual') {
             quizCount = 1; // Assume at least 1 quiz exists for original topics
@@ -140,17 +130,12 @@ export async function getQuiz() {
           quizCount: quizCount
         });
       }
-    } else {
-      console.warn('⚠️ No topics found or topics array is empty');
     }
-    
-    console.log('🎯 Final quiz items for home page:', quizItems);
     
     // Return array of quiz items for the home page
     return quizItems;
   } catch (error) {
-    console.error('💥 Failed to get quiz data from backend:', error);
-    console.error('💥 Error details:', error.stack);
+    console.error('Failed to get quiz data from backend:', error);
     throw new Error(`Failed to load quiz data: ${error.message}`);
   }
 }

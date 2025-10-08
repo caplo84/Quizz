@@ -1,26 +1,34 @@
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { resetQuiz, fetchRandomQuestions, startNewBatch } from "../features/quiz/quizSlice";
+import { resetQuiz, startNewBatch, fetchQuestionsWithAnswers } from "../features/quiz/quizSlice";
 import { resetMode } from "../features/home/homeSlice";
 import { useEffect, useState } from "react";
+import { buttonStyles, textStyles, cardStyles } from "../utils/commonStyles";
 
 function FinishedScreen() {
   const { name, icon } = useSelector((state) => state.home);
-  const { score, questions, isRandomQuiz, randomTopic, usedQuestionIds, userAnswers } = useSelector((state) => state.quiz);
+  const { score, questions, isRandomQuiz, randomTopic, userAnswers } = useSelector((state) => state.quiz);
   const { darkMode } = useSelector((state) => state.home);
   const [searchParams] = useSearchParams();
   const isRandomFinish = searchParams.get('random') === 'true';
   const [showReview, setShowReview] = useState(false);
+  const [isLoadingAnswers, setIsLoadingAnswers] = useState(false);
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  // Debug the random quiz state
-  console.log('🎯 FinishedScreen Debug:');
-  console.log('  isRandomFinish:', isRandomFinish);
-  console.log('  isRandomQuiz:', isRandomQuiz);
-  console.log('  randomTopic:', randomTopic);
-  console.log('  Combined condition:', isRandomFinish && isRandomQuiz);
+
+
+  useEffect(() => {
+    if (showReview && !isLoadingAnswers && randomTopic) {
+      setIsLoadingAnswers(true);
+      dispatch(fetchQuestionsWithAnswers({ 
+        topicSlug: randomTopic.slug,
+        questionIds: userAnswers.map(ua => ua.questionId).filter(Boolean)
+      }))
+      .finally(() => setIsLoadingAnswers(false));
+    }
+  }, [showReview, dispatch, randomTopic, userAnswers, isLoadingAnswers]);
 
   const bgColors = {
     HTML: "#FFF1E9",
@@ -46,7 +54,13 @@ function FinishedScreen() {
       // For regular quiz, reset and go to same topic selection
       dispatch(resetQuiz());
       dispatch(resetMode());
-      navigate("/");
+      if (name && name !== 'undefined') {
+        // Navigate to the same topic
+        const topicSlug = name.toLowerCase().replace(/\s+/g, '-');
+        navigate(`/${topicSlug}`);
+      } else {
+        navigate("/");
+      }
     }
   }
 
@@ -71,7 +85,7 @@ function FinishedScreen() {
           {/* Score Screen */}
           <div>
             <h2
-              className={`mobile:text-[4rem] text-[6.4rem] font-light leading-[100%] transition-all duration-300 ${
+              className={`${textStyles.heading} ${
                 darkMode ? "text-white" : "text-dark-navy"
               }`}
             >
@@ -81,7 +95,7 @@ function FinishedScreen() {
           </div>
           <div>
             <div
-              className={`mobile:rounded-[1.2rem] flex flex-col items-center gap-16 rounded-[2.4rem] p-20 transition-all duration-300 ${
+              className={`${cardStyles.main} ${
                 darkMode ? "bg-navy" : "bg-white"
               }`}
             >
@@ -93,7 +107,7 @@ function FinishedScreen() {
                   style={bgStyle}
                 />
                 <p
-                  className={`mobile:text-[1.8rem] text-[2.8rem] font-medium leading-[100%] transition-all duration-300 ${
+                  className={`${textStyles.subheading} ${
                     darkMode ? "text-white" : "text-dark-navy"
                   }`}
                 >
@@ -102,14 +116,14 @@ function FinishedScreen() {
               </div>
               <div className="flex flex-col items-center gap-6">
                 <p
-                  className={`mobile:text-[8.8rem] text-[14.4rem] font-medium leading-[100%] transition-all duration-300 ${
+                  className={`${textStyles.score} ${
                     darkMode ? "text-white" : "text-dark-navy"
                   }`}
                 >
                   {score}
                 </p>
                 <p
-                  className={`mobile:text-[1.8rem] text-[2.4rem] leading-[150%] transition-all duration-300 ${
+                  className={`${textStyles.body} ${
                     darkMode ? "text-light-bluish" : "text-dark-navy"
                   }`}
                 >
@@ -133,13 +147,13 @@ function FinishedScreen() {
             {/* Quiz completion buttons - same for all quizzes */}
             <div className="space-y-4">
               <button
-                className="mobile:text-[1.8rem] mobile:p-7 mobile:rounded-[1.2rem] col-start-2 mt-12 w-full rounded-[2.4rem] bg-purple p-[3.2rem] text-[2.8rem] font-medium leading-[100%] text-white transition-all duration-300 hover:bg-purple/80"
+                className={`${buttonStyles.primary} col-start-2 mt-12`}
                 onClick={playAgain}
               >
                 🎲 Play Again {randomTopic ? `(${randomTopic.name})` : `(${name})`}
               </button>
               <button
-                className={`mobile:text-[1.8rem] mobile:p-7 mobile:rounded-[1.2rem] w-full rounded-[2.4rem] p-[3.2rem] text-[2.8rem] font-medium leading-[100%] transition-all duration-300 border-2 ${
+                className={`${buttonStyles.secondary} ${
                   darkMode 
                     ? 'border-white text-white hover:bg-white hover:text-dark-navy' 
                     : 'border-dark-navy text-dark-navy hover:bg-dark-navy hover:text-white'
@@ -178,7 +192,7 @@ function FinishedScreen() {
             <div className="space-y-6 max-h-[60vh] overflow-y-auto">
               {userAnswers.map((answer, index) => (
                 <div
-                  key={index}
+                  key={answer.questionId || index}
                   className={`p-6 rounded-xl border-2 transition-all duration-300 ${
                     answer.isCorrect
                       ? darkMode 
