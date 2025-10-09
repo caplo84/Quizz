@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"regexp"
 	"strings"
 	"time"
-	"regexp"
 
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -551,10 +551,10 @@ func (s *GitHubSyncServiceImpl) cleanupCategoryName(categoryName string) string 
 // downloadMissingImagesForQuestions downloads images for questions if they don't exist locally
 func (s *GitHubSyncServiceImpl) downloadMissingImagesForQuestions(ctx context.Context, questions []datasources.ParsedQuestion, topicName string) error {
 	log.Printf("DEBUG: downloadMissingImagesForQuestions called with %d questions for topic %s", len(questions), topicName)
-	
+
 	for i, question := range questions {
 		log.Printf("DEBUG: Checking question %d for images", i+1)
-		
+
 		// Check question image
 		if question.QuestionImageURL != nil && *question.QuestionImageURL != "" {
 			log.Printf("DEBUG: Found question image URL: %s", *question.QuestionImageURL)

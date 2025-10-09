@@ -66,7 +66,7 @@ type Question struct {
 	ExternalID        *string `json:"external_id,omitempty" gorm:"size:200"`
 
 	// Code and image fields
-	QuestionCode 	   *string `json:"question_code,omitempty" gorm:"type:text"`
+	QuestionCode         *string `json:"question_code,omitempty" gorm:"type:text"`
 	QuestionCodeLanguage *string `json:"question_code_language,omitempty" gorm:"size:50"`
 	QuestionImageURL     *string `json:"question_image_url,omitempty" gorm:"type:text"`
 	QuestionImageAlt     *string `json:"question_image_alt,omitempty" gorm:"type:text"`
@@ -78,12 +78,12 @@ type Question struct {
 
 // Choice represents a multiple choice answer option
 type Choice struct {
-	ID          uint      `json:"id" gorm:"primaryKey"`
-	QuestionID  uint      `json:"question_id" gorm:"not null;index" validate:"required"`
-	ChoiceText  string    `json:"choice_text" gorm:"type:text;not null" validate:"required,min=1"`
-	IsCorrect   bool      `json:"is_correct" gorm:"default:false"`
-	OrderIndex  int       `json:"order_index" gorm:"not null" validate:"required,min=1"`
-	Explanation *string   `json:"explanation,omitempty" gorm:"type:text"`
+	ID          uint    `json:"id" gorm:"primaryKey"`
+	QuestionID  uint    `json:"question_id" gorm:"not null;index" validate:"required"`
+	ChoiceText  string  `json:"choice_text" gorm:"type:text;not null" validate:"required,min=1"`
+	IsCorrect   bool    `json:"is_correct" gorm:"default:false"`
+	OrderIndex  int     `json:"order_index" gorm:"not null" validate:"required,min=1"`
+	Explanation *string `json:"explanation,omitempty" gorm:"type:text"`
 
 	// Code and image fields
 	ChoiceCode         *string `json:"choice_code,omitempty" gorm:"type:text"`
@@ -91,8 +91,8 @@ type Choice struct {
 	ChoiceImageURL     *string `json:"choice_image_url,omitempty" gorm:"type:text"`
 	ChoiceImageAlt     *string `json:"choice_image_alt,omitempty" gorm:"type:text"`
 
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 
 	// Relationships
 	Question Question `json:"question" gorm:"foreignKey:QuestionID;constraint:OnDelete:CASCADE"`

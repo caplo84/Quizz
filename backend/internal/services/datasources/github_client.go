@@ -5,13 +5,13 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"strings"
-	"time"
-	"regexp"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
+	"time"
 
 	"github.com/go-resty/resty/v2"
 	"github.com/yuin/goldmark"
@@ -160,7 +160,7 @@ func (g *GitHubClient) DownloadImage(ctx context.Context, imageURL, topic string
 	}
 
 	// Standardized filename generation: Create consistent naming
-	// Format: {topic}_{original_filename} 
+	// Format: {topic}_{original_filename}
 	// Example: "android_04.jpeg", "css_Q-141.png"
 	originalFilename := filepath.Base(imageURL)
 	filename := fmt.Sprintf("%s_%s", topic, originalFilename)
@@ -221,8 +221,8 @@ func (g *GitHubClient) DownloadImage(ctx context.Context, imageURL, topic string
 func (g *GitHubClient) ListImageFiles(ctx context.Context, folderPath string) ([]string, error) {
 	// URL encode the folder path to handle special characters like c++
 	encodedPath := strings.ReplaceAll(folderPath, "+", "%2B")
-	
-	url := fmt.Sprintf("%s/repos/%s/%s/contents/%s", 
+
+	url := fmt.Sprintf("%s/repos/%s/%s/contents/%s",
 		g.config.BaseURL, g.config.Owner, g.config.Repository, encodedPath)
 
 	type GitHubFile struct {
@@ -251,7 +251,7 @@ func (g *GitHubClient) ListImageFiles(ctx context.Context, folderPath string) ([
 
 	var imageFiles []string
 	imageExtensions := map[string]bool{
-		".png": true, ".jpg": true, ".jpeg": true, ".gif": true, 
+		".png": true, ".jpg": true, ".jpeg": true, ".gif": true,
 		".svg": true, ".webp": true, ".bmp": true, ".ico": true,
 	}
 
@@ -442,8 +442,6 @@ func (g *GitHubClient) extractImageFromText(text string) (url string, alt string
 	return "", "", text
 }
 
-
-
 func (g *GitHubClient) parseMarkdownQuiz(file GitHubFile) (*ParsedQuiz, error) {
 	source := []byte(file.Content)
 	doc := g.parser.Parser().Parse(text.NewReader(source))
@@ -494,7 +492,7 @@ func (g *GitHubClient) parseMarkdownQuiz(file GitHubFile) (*ParsedQuiz, error) {
 					if imageURL != "" {
 						currentQuestion.QuestionImageURL = &imageURL
 						currentQuestion.QuestionImageAlt = &imageAlt
-						
+
 						// Download the image to local storage and get standardized filename
 						if standardizedFilename, err := g.DownloadImage(context.Background(), imageURL, quiz.Category); err != nil {
 							fmt.Printf("Warning: Failed to download question image %s: %v\n", imageURL, err)
@@ -517,11 +515,11 @@ func (g *GitHubClient) parseMarkdownQuiz(file GitHubFile) (*ParsedQuiz, error) {
 				if currentQuestion != nil && len(currentQuestion.Choices) == 0 {
 					if strings.Contains(currentQuestion.Text, "Which code snippet would achieve the layout displayed below") {
 						fmt.Printf("🖼️ Q36 DEBUG - Found Image Node!\n")
-						
+
 						// Extract image URL and alt text
 						imageURL := string(node.Destination)
 						imageAlt := ""
-						
+
 						// Get alt text from image children
 						for child := node.FirstChild(); child != nil; child = child.NextSibling() {
 							if textNode, ok := child.(*ast.Text); ok {
@@ -529,10 +527,10 @@ func (g *GitHubClient) parseMarkdownQuiz(file GitHubFile) (*ParsedQuiz, error) {
 								break
 							}
 						}
-						
+
 						fmt.Printf("🖼️ Q36 DEBUG - Image URL: '%s'\n", imageURL)
 						fmt.Printf("🖼️ Q36 DEBUG - Image Alt: '%s'\n", imageAlt)
-						
+
 						// Only set if we don't already have an image
 						if currentQuestion.QuestionImageURL == nil {
 							// Download the image to local storage and get standardized filename
@@ -544,7 +542,7 @@ func (g *GitHubClient) parseMarkdownQuiz(file GitHubFile) (*ParsedQuiz, error) {
 								// Use standardized filename for database storage
 								currentQuestion.QuestionImageURL = &standardizedFilename
 							}
-							
+
 							if imageAlt != "" {
 								currentQuestion.QuestionImageAlt = &imageAlt
 							}
@@ -570,7 +568,7 @@ func (g *GitHubClient) parseMarkdownQuiz(file GitHubFile) (*ParsedQuiz, error) {
 				if currentQuestion != nil && len(currentQuestion.Choices) == 0 {
 					paragraphText := g.extractFullTextFromNode(node, string(source))
 					paragraphText = strings.TrimSpace(paragraphText)
-					
+
 					// Debug logging for Q36
 					if strings.Contains(currentQuestion.Text, "layout displayed below") {
 						fmt.Printf("DEBUG Q36: Found paragraph: '%s'\n", paragraphText)
@@ -583,14 +581,14 @@ func (g *GitHubClient) parseMarkdownQuiz(file GitHubFile) (*ParsedQuiz, error) {
 							fmt.Printf("DEBUG Q36: Paragraph does NOT match image pattern\n")
 						}
 					}
-					
+
 					// Check if this paragraph contains an image
 					if imageURL, imageAlt, cleanText := g.extractImageFromText(paragraphText); imageURL != "" {
 						// Debug logging for Q36
 						if strings.Contains(currentQuestion.Text, "layout displayed below") {
 							fmt.Printf("DEBUG Q36: Found image in paragraph - URL: %s, Alt: %s\n", imageURL, imageAlt)
 						}
-						
+
 						// Only set if we don't already have an image from the question text
 						if currentQuestion.QuestionImageURL == nil {
 							// Download the image to local storage and get standardized filename
@@ -604,7 +602,7 @@ func (g *GitHubClient) parseMarkdownQuiz(file GitHubFile) (*ParsedQuiz, error) {
 							}
 							currentQuestion.QuestionImageAlt = &imageAlt
 						}
-						
+
 						// If there's remaining text after removing the image, append it to the question
 						if cleanText != "" {
 							if currentQuestion.Text != "" {
@@ -619,7 +617,7 @@ func (g *GitHubClient) parseMarkdownQuiz(file GitHubFile) (*ParsedQuiz, error) {
 				if currentQuestion != nil && len(currentQuestion.Choices) == 0 {
 					// Only process the first list for each question
 					choices, correct, choiceCodes, choiceCodeLangs, choiceImageURLs, choiceImageAlts := g.extractChoicesFromList(node, string(source), quiz.Category)
-					
+
 					currentQuestion.Choices = choices
 					currentQuestion.Correct = correct
 					currentQuestion.ChoiceCodes = choiceCodes
@@ -641,28 +639,28 @@ func (g *GitHubClient) parseMarkdownQuiz(file GitHubFile) (*ParsedQuiz, error) {
 }
 
 func (g *GitHubClient) extractChoicesFromList(list *ast.List, source string, category string) ([]string, int, []*string, []*string, []*string, []*string) {
-    sourceBytes := []byte(source)
-    var choices []string
+	sourceBytes := []byte(source)
+	var choices []string
 	var choiceCodes []*string
 	var choiceCodeLangs []*string
 	var choiceImageURLs []*string
 	var choiceImageAlts []*string
-    correctIndex := -1
+	correctIndex := -1
 
-    for child := list.FirstChild(); child != nil; child = child.NextSibling() {
-        if listItem, ok := child.(*ast.ListItem); ok {
-            var textParts []string
-            var choiceCode *string
-            var choiceCodeLang *string
-            var choiceImageURL *string
-            var choiceImageAlt *string
+	for child := list.FirstChild(); child != nil; child = child.NextSibling() {
+		if listItem, ok := child.(*ast.ListItem); ok {
+			var textParts []string
+			var choiceCode *string
+			var choiceCodeLang *string
+			var choiceImageURL *string
+			var choiceImageAlt *string
 
-            // Check if this is Q36 by looking for the layout text in the source
-            isQ36Debug := strings.Contains(source, "layout displayed below")
+			// Check if this is Q36 by looking for the layout text in the source
+			isQ36Debug := strings.Contains(source, "layout displayed below")
 
-            for liChild := listItem.FirstChild(); liChild != nil; liChild = liChild.NextSibling() {
-                switch n := liChild.(type) {
-                case *ast.FencedCodeBlock:
+			for liChild := listItem.FirstChild(); liChild != nil; liChild = liChild.NextSibling() {
+				switch n := liChild.(type) {
+				case *ast.FencedCodeBlock:
 					content, lang := g.extractCodeBlock(n, sourceBytes)
 					if content != "" && choiceCode == nil { // Take first code block only
 						choiceCode = &content
@@ -671,197 +669,197 @@ func (g *GitHubClient) extractChoicesFromList(list *ast.List, source string, cat
 						}
 					}
 
-                case *ast.CodeBlock:
+				case *ast.CodeBlock:
 					content, _ := g.extractCodeBlock(n, sourceBytes)
 					if content != "" && choiceCode == nil { // Take first code block only
 						choiceCode = &content
 					}
 
-                default:
-                    txt := g.extractFullTextFromNode(n, source)
-                    txt = strings.ReplaceAll(txt, "&shy;", "")
-                    txt = strings.TrimSpace(txt)
-                    if txt != "" {
-                        fmt.Printf("DEBUG: Found text part: '%s'\n", txt)
-                        textParts = append(textParts, txt)
-                    }
-                }
-            }
+				default:
+					txt := g.extractFullTextFromNode(n, source)
+					txt = strings.ReplaceAll(txt, "&shy;", "")
+					txt = strings.TrimSpace(txt)
+					if txt != "" {
+						fmt.Printf("DEBUG: Found text part: '%s'\n", txt)
+						textParts = append(textParts, txt)
+					}
+				}
+			}
 
-            // Join all text parts and process
-            itemText := strings.Join(textParts, "\n")
-            
-            if isQ36Debug {
-                fmt.Printf("🔍 Q36 DEBUG - Combined item text: '%s'\n", itemText)
-            }
-            
-            // Extract images from choice text
-            if imageURL, imageAlt, cleanText := g.extractImageFromText(itemText); imageURL != "" {
-                choiceImageURL = &imageURL
-                choiceImageAlt = &imageAlt
-                itemText = cleanText
-                
-                // Download the choice image to local storage and get standardized filename
-                if standardizedFilename, err := g.DownloadImage(context.Background(), imageURL, category); err != nil {
-                    fmt.Printf("Warning: Failed to download choice image %s: %v\n", imageURL, err)
-                    // Keep original URL as fallback
-                } else if standardizedFilename != "" {
-                    // Update with standardized filename for database storage
-                    choiceImageURL = &standardizedFilename
-                }
-            }
+			// Join all text parts and process
+			itemText := strings.Join(textParts, "\n")
 
-            // Checkbox detection
-            if isQ36Debug {
-                fmt.Printf("🔍 Q36 DEBUG - Before checkbox detection: '%s'\n", itemText)
-            }
-            if strings.Contains(itemText, "[x]") || strings.Contains(itemText, "[X]") {
-                if isQ36Debug {
-                    fmt.Printf("🔍 Q36 DEBUG - Found correct answer (x)\n")
-                }
-                itemText = strings.ReplaceAll(itemText, "[x]", "")
-                itemText = strings.ReplaceAll(itemText, "[X]", "")
-                correctIndex = len(choices)
-            }
-            itemText = strings.ReplaceAll(itemText, "[ ]", "")
-            itemText = strings.TrimSpace(itemText)
-            
-            if isQ36Debug {
-                fmt.Printf("🔍 Q36 DEBUG - After checkbox cleaning: '%s'\n", itemText)
-            }
+			if isQ36Debug {
+				fmt.Printf("🔍 Q36 DEBUG - Combined item text: '%s'\n", itemText)
+			}
 
-            if itemText != "" {
-                if isQ36Debug {
-                    fmt.Printf("🔍 Q36 DEBUG - Adding choice #%d: '%s'\n", len(choices), itemText)
-                }
-                choices = append(choices, itemText)
+			// Extract images from choice text
+			if imageURL, imageAlt, cleanText := g.extractImageFromText(itemText); imageURL != "" {
+				choiceImageURL = &imageURL
+				choiceImageAlt = &imageAlt
+				itemText = cleanText
+
+				// Download the choice image to local storage and get standardized filename
+				if standardizedFilename, err := g.DownloadImage(context.Background(), imageURL, category); err != nil {
+					fmt.Printf("Warning: Failed to download choice image %s: %v\n", imageURL, err)
+					// Keep original URL as fallback
+				} else if standardizedFilename != "" {
+					// Update with standardized filename for database storage
+					choiceImageURL = &standardizedFilename
+				}
+			}
+
+			// Checkbox detection
+			if isQ36Debug {
+				fmt.Printf("🔍 Q36 DEBUG - Before checkbox detection: '%s'\n", itemText)
+			}
+			if strings.Contains(itemText, "[x]") || strings.Contains(itemText, "[X]") {
+				if isQ36Debug {
+					fmt.Printf("🔍 Q36 DEBUG - Found correct answer (x)\n")
+				}
+				itemText = strings.ReplaceAll(itemText, "[x]", "")
+				itemText = strings.ReplaceAll(itemText, "[X]", "")
+				correctIndex = len(choices)
+			}
+			itemText = strings.ReplaceAll(itemText, "[ ]", "")
+			itemText = strings.TrimSpace(itemText)
+
+			if isQ36Debug {
+				fmt.Printf("🔍 Q36 DEBUG - After checkbox cleaning: '%s'\n", itemText)
+			}
+
+			if itemText != "" {
+				if isQ36Debug {
+					fmt.Printf("🔍 Q36 DEBUG - Adding choice #%d: '%s'\n", len(choices), itemText)
+				}
+				choices = append(choices, itemText)
 				choiceCodes = append(choiceCodes, choiceCode)
 				choiceCodeLangs = append(choiceCodeLangs, choiceCodeLang)
 				choiceImageURLs = append(choiceImageURLs, choiceImageURL)
 				choiceImageAlts = append(choiceImageAlts, choiceImageAlt)
-            } else {
-                if isQ36Debug {
-                    fmt.Printf("🔍 Q36 DEBUG - Skipping empty choice\n")
-                }
-            }
-        }
-    }
+			} else {
+				if isQ36Debug {
+					fmt.Printf("🔍 Q36 DEBUG - Skipping empty choice\n")
+				}
+			}
+		}
+	}
 
-    // Now consider sibling nodes: sometimes the markdown places details (fenced code
-    // blocks) or additional list nodes after the initial list. Walk siblings until
-    // the next heading and merge any fenced code block content into the previous
-    // choice, and extract additional list items from sibling lists.
-    for sib := list.NextSibling(); sib != nil; sib = sib.NextSibling() {
-        // Stop when we reach a heading - that's the next question.
-        if _, ok := sib.(*ast.Heading); ok {
-            break
-        }
+	// Now consider sibling nodes: sometimes the markdown places details (fenced code
+	// blocks) or additional list nodes after the initial list. Walk siblings until
+	// the next heading and merge any fenced code block content into the previous
+	// choice, and extract additional list items from sibling lists.
+	for sib := list.NextSibling(); sib != nil; sib = sib.NextSibling() {
+		// Stop when we reach a heading - that's the next question.
+		if _, ok := sib.(*ast.Heading); ok {
+			break
+		}
 
-        switch s := sib.(type) {
-        case *ast.FencedCodeBlock:
-            // Attach code block content to the last choice (if present)
-            if len(choices) == 0 {
-                continue
-            }
-            lastIndex := len(choices) - 1
-            content, lang := g.extractCodeBlock(s, sourceBytes)
-            if content != "" {
-                // If the last choice doesn't have a code block yet, assign it
-                if choiceCodes[lastIndex] == nil {
-                    choiceCodes[lastIndex] = &content
-                    if lang != "" {
-                        choiceCodeLangs[lastIndex] = &lang
-                    }
-                }
-            }
+		switch s := sib.(type) {
+		case *ast.FencedCodeBlock:
+			// Attach code block content to the last choice (if present)
+			if len(choices) == 0 {
+				continue
+			}
+			lastIndex := len(choices) - 1
+			content, lang := g.extractCodeBlock(s, sourceBytes)
+			if content != "" {
+				// If the last choice doesn't have a code block yet, assign it
+				if choiceCodes[lastIndex] == nil {
+					choiceCodes[lastIndex] = &content
+					if lang != "" {
+						choiceCodeLangs[lastIndex] = &lang
+					}
+				}
+			}
 
-        case *ast.List:
-            // Extract items from this list and append
-            for li := s.FirstChild(); li != nil; li = li.NextSibling() {
-                if listItem, ok := li.(*ast.ListItem); ok {
-                    var textParts []string
-                    var choiceCode *string
-                    var choiceCodeLang *string
-                    var choiceImageURL *string
-                    var choiceImageAlt *string
+		case *ast.List:
+			// Extract items from this list and append
+			for li := s.FirstChild(); li != nil; li = li.NextSibling() {
+				if listItem, ok := li.(*ast.ListItem); ok {
+					var textParts []string
+					var choiceCode *string
+					var choiceCodeLang *string
+					var choiceImageURL *string
+					var choiceImageAlt *string
 
-                    for liChild := listItem.FirstChild(); liChild != nil; liChild = liChild.NextSibling() {
-                        switch n := liChild.(type) {
-                        case *ast.FencedCodeBlock:
-                            content, lang := g.extractCodeBlock(n, sourceBytes)
-                            if content != "" && choiceCode == nil {
-                                choiceCode = &content
-                                if lang != "" {
-                                    choiceCodeLang = &lang
-                                }
-                            }
-                        case *ast.CodeBlock:
-                            content, _ := g.extractCodeBlock(n, sourceBytes)
-                            if content != "" && choiceCode == nil {
-                                choiceCode = &content
-                            }
-                        default:
-                            txt := g.extractFullTextFromNode(n, source)
-                            txt = strings.ReplaceAll(txt, "&shy;", "")
-                            txt = strings.TrimSpace(txt)
-                            if txt != "" {
-                                textParts = append(textParts, txt)
-                            }
-                        }
-                    }
+					for liChild := listItem.FirstChild(); liChild != nil; liChild = liChild.NextSibling() {
+						switch n := liChild.(type) {
+						case *ast.FencedCodeBlock:
+							content, lang := g.extractCodeBlock(n, sourceBytes)
+							if content != "" && choiceCode == nil {
+								choiceCode = &content
+								if lang != "" {
+									choiceCodeLang = &lang
+								}
+							}
+						case *ast.CodeBlock:
+							content, _ := g.extractCodeBlock(n, sourceBytes)
+							if content != "" && choiceCode == nil {
+								choiceCode = &content
+							}
+						default:
+							txt := g.extractFullTextFromNode(n, source)
+							txt = strings.ReplaceAll(txt, "&shy;", "")
+							txt = strings.TrimSpace(txt)
+							if txt != "" {
+								textParts = append(textParts, txt)
+							}
+						}
+					}
 
-                    itemText := strings.Join(textParts, "\n")
-                    
-                    // Extract images from choice text
-                    if imageURL, imageAlt, cleanText := g.extractImageFromText(itemText); imageURL != "" {
-                        choiceImageURL = &imageURL
-                        choiceImageAlt = &imageAlt
-                        itemText = cleanText
-                        
-                        // Download the choice image to local storage and get standardized filename
-                        if standardizedFilename, err := g.DownloadImage(context.Background(), imageURL, category); err != nil {
-                            fmt.Printf("Warning: Failed to download choice image %s: %v\n", imageURL, err)
-                            // Keep original URL as fallback
-                        } else if standardizedFilename != "" {
-                            // Update with standardized filename for database storage
-                            choiceImageURL = &standardizedFilename
-                        }
-                    }
+					itemText := strings.Join(textParts, "\n")
 
-                    // Checkbox detection
-                    if strings.Contains(itemText, "[x]") || strings.Contains(itemText, "[X]") {
-                        itemText = strings.ReplaceAll(itemText, "[x]", "")
-                        itemText = strings.ReplaceAll(itemText, "[X]", "")
-                        correctIndex = len(choices)
-                    }
-                    itemText = strings.ReplaceAll(itemText, "[ ]", "")
-                    itemText = strings.TrimSpace(itemText)
-                    if itemText != "" {
-                        choices = append(choices, itemText)
-                        choiceCodes = append(choiceCodes, choiceCode)
-                        choiceCodeLangs = append(choiceCodeLangs, choiceCodeLang)
-                        choiceImageURLs = append(choiceImageURLs, choiceImageURL)
-                        choiceImageAlts = append(choiceImageAlts, choiceImageAlt)
-                    }
-                }
-            }
-        default:
-            // ignore other node types
-        }
-    }
+					// Extract images from choice text
+					if imageURL, imageAlt, cleanText := g.extractImageFromText(itemText); imageURL != "" {
+						choiceImageURL = &imageURL
+						choiceImageAlt = &imageAlt
+						itemText = cleanText
 
-    // Add final debug output for Q36
-    isQ36 := strings.Contains(source, "layout displayed below")
-    if isQ36 {
-        fmt.Printf("🔍 Q36 DEBUG - FINAL RESULTS:\n")
-        fmt.Printf("🔍 Q36 DEBUG - Choices count: %d\n", len(choices))
-        for i, choice := range choices {
-            fmt.Printf("🔍 Q36 DEBUG - Choice %d: '%s'\n", i, choice)
-        }
-        fmt.Printf("🔍 Q36 DEBUG - Correct index: %d\n", correctIndex)
-    }
-    
-    return choices, correctIndex, choiceCodes, choiceCodeLangs, choiceImageURLs, choiceImageAlts
+						// Download the choice image to local storage and get standardized filename
+						if standardizedFilename, err := g.DownloadImage(context.Background(), imageURL, category); err != nil {
+							fmt.Printf("Warning: Failed to download choice image %s: %v\n", imageURL, err)
+							// Keep original URL as fallback
+						} else if standardizedFilename != "" {
+							// Update with standardized filename for database storage
+							choiceImageURL = &standardizedFilename
+						}
+					}
+
+					// Checkbox detection
+					if strings.Contains(itemText, "[x]") || strings.Contains(itemText, "[X]") {
+						itemText = strings.ReplaceAll(itemText, "[x]", "")
+						itemText = strings.ReplaceAll(itemText, "[X]", "")
+						correctIndex = len(choices)
+					}
+					itemText = strings.ReplaceAll(itemText, "[ ]", "")
+					itemText = strings.TrimSpace(itemText)
+					if itemText != "" {
+						choices = append(choices, itemText)
+						choiceCodes = append(choiceCodes, choiceCode)
+						choiceCodeLangs = append(choiceCodeLangs, choiceCodeLang)
+						choiceImageURLs = append(choiceImageURLs, choiceImageURL)
+						choiceImageAlts = append(choiceImageAlts, choiceImageAlt)
+					}
+				}
+			}
+		default:
+			// ignore other node types
+		}
+	}
+
+	// Add final debug output for Q36
+	isQ36 := strings.Contains(source, "layout displayed below")
+	if isQ36 {
+		fmt.Printf("🔍 Q36 DEBUG - FINAL RESULTS:\n")
+		fmt.Printf("🔍 Q36 DEBUG - Choices count: %d\n", len(choices))
+		for i, choice := range choices {
+			fmt.Printf("🔍 Q36 DEBUG - Choice %d: '%s'\n", i, choice)
+		}
+		fmt.Printf("🔍 Q36 DEBUG - Correct index: %d\n", correctIndex)
+	}
+
+	return choices, correctIndex, choiceCodes, choiceCodeLangs, choiceImageURLs, choiceImageAlts
 }
 
 // extractFullTextFromNode extracts only plain text content from a node, excluding code blocks and images

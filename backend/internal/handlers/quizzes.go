@@ -99,7 +99,7 @@ func (h *QuizHandler) GetQuizQuestions(c *gin.Context) {
 
 	// Check if client wants to include correct answers (for review page)
 	includeAnswers := c.Query("include_answers") == "true"
-	
+
 	if !includeAnswers {
 		// Remove correct answers from response for quiz play
 		for i := range questions {
@@ -156,7 +156,7 @@ func (h *QuizHandler) GetRandomQuestions(c *gin.Context) {
 
 	// Check if client wants to include correct answers (for review page)
 	includeAnswers := c.Query("include_answers") == "true"
-	
+
 	if !includeAnswers {
 		// Remove correct answers from response for quiz play
 		for i := range questions {
@@ -217,7 +217,7 @@ func (h *QuizHandler) GetQuestionsByIDs(c *gin.Context) {
 
 	// Check if client wants to include correct answers (for review page)
 	includeAnswers := c.Query("include_answers") == "true"
-	
+
 	if !includeAnswers {
 		// Remove correct answers from response for quiz play
 		for i := range questions {

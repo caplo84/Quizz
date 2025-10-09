@@ -42,24 +42,24 @@ type ParsedQuiz struct {
 }
 
 type ParsedQuestion struct {
-	Text        string
-	Choices     []string
-	Correct     int
-	Type        string
-	
+	Text    string
+	Choices []string
+	Correct int
+	Type    string
+
 	// Metadata fields
 	Category          string
 	Source            string
 	ExternalReference string
 	ExternalID        string
-	
+
 	// Code and image fields
-	QuestionCode         *string
-	QuestionCodeLang     *string
-	QuestionImageURL     *string
-	QuestionImageAlt     *string
-	ChoiceCodes          []*string // indexed by choice
-	ChoiceCodeLangs      []*string // indexed by choice
-	ChoiceImageURLs      []*string // indexed by choice
-	ChoiceImageAlts      []*string // indexed by choice
+	QuestionCode     *string
+	QuestionCodeLang *string
+	QuestionImageURL *string
+	QuestionImageAlt *string
+	ChoiceCodes      []*string // indexed by choice
+	ChoiceCodeLangs  []*string // indexed by choice
+	ChoiceImageURLs  []*string // indexed by choice
+	ChoiceImageAlts  []*string // indexed by choice
 }
