@@ -84,6 +84,9 @@ const quizSlice = createSlice({
     setIndex(state) {
       state.index++;
     },
+    jumpToQuestion(state, action) {
+      state.index = action.payload;
+    },
     setScore(state) {
       state.score++;
     },
@@ -171,6 +174,7 @@ const quizSlice = createSlice({
 
 export const {
   setIndex,
+  jumpToQuestion,
   setScore,
   setAnswer,
   setQuestions,

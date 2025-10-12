@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useParams, useSearchParams } from "react-router-dom";
 import { setQuestions, resetQuiz, fetchRandomQuestions, setChosenAnswer, setAnswer } from "./quizSlice";
 import { topicsApi, quizzesApi } from "../../services/api.js";
-import QuizPage from "./QuizPage";
+import QuizPageNew from "./QuizPageNew";
 
 function Quiz() {
   const { type } = useParams(); // Get the topic name from URL
@@ -188,8 +188,7 @@ function Quiz() {
   return (
     <div>
       {currentQuestion && currentQuiz && (
-        <QuizPage 
-          key={currentQuestion.question} 
+        <QuizPageNew 
           question={currentQuestion} 
           quiz={currentQuiz}
         />
