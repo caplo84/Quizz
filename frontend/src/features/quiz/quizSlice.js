@@ -27,7 +27,7 @@ export const fetchRandomQuestions = createAsyncThunk(
   async ({ topicSlug, limit = 10, excludeIds = [] }) => {
     const excludeParam = excludeIds.length > 0 ? excludeIds.join(',') : '';
     const response = await fetch(
-      `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/v1/topics/${topicSlug}/questions/random?limit=${limit}&exclude=${excludeParam}`
+      `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/v1/topics/${topicSlug}/questions/random?limit=${limit}&exclude=${excludeParam}&include_answers=true`
     );
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
