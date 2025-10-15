@@ -48,7 +48,7 @@ function Quiz() {
                   id: q.id,
                   question: q.question_text || q.text || q.question,
                   options: q.choices?.map(choice => choice.choice_text || choice.text || choice.option) || q.options || [],
-                  answer: q.choices?.find(choice => choice.is_correct)?.choice_text || q.answer,
+                  answer: answer,
                   // Content separation fields
                   question_image_url: q.question_image_url,
                   question_image_alt: q.question_image_alt,
@@ -108,6 +108,7 @@ function Quiz() {
               setLoading(false);
               return;
             }
+            
             
             // Transform questions to match expected format
             const transformedQuestions = result.data.map(q => ({
