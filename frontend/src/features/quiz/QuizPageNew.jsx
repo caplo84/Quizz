@@ -84,7 +84,11 @@ function QuizPageNew({ question, quiz }) {
     questions.forEach((question, idx) => {
       const userAnswer = finalAnswers[idx] || "";
       const isCorrect = userAnswer === question.answer;
-      if (isCorrect) finalScore++;
+      
+      if (isCorrect) {
+        finalScore++;
+        dispatch(setScore()); // Dispatch for each correct answer
+      }
       
       dispatch(addUserAnswer({
         questionIndex: idx,
