@@ -7,15 +7,15 @@ function ImageDisplay({ imageUrl, altText, className = '', topic = 'android' }) 
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [isZoomed, setIsZoomed] = useState(false);
-
-  if (!imageUrl || imageUrl.trim() === '') {
-    return null;
-  }
-
+  
   // Try local image first, fallback to GitHub if not found
   const localImageUrl = getQuizImageUrl(imageUrl, topic);
   const githubImageUrl = getGitHubImageUrl(imageUrl, topic);
   const [currentImageUrl, setCurrentImageUrl] = useState(localImageUrl);
+
+  if (!imageUrl || imageUrl.trim() === '') {
+    return null;
+  }
 
 
 

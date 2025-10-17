@@ -44,6 +44,10 @@ function Quiz() {
             // Transform questions to match expected format
             const transformedQuestions = result.data.map((q, index) => {
               try {
+                // Find the correct answer from choices
+                const correctChoice = q.choices?.find(choice => choice.is_correct);
+                const answer = correctChoice ? correctChoice.choice_text || correctChoice.text || correctChoice.option : null;
+                
                 return {
                   id: q.id,
                   question: q.question_text || q.text || q.question,
