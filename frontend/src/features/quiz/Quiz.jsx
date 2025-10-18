@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useParams, useSearchParams } from "react-router-dom";
-import { setQuestions, resetQuiz, fetchRandomQuestions, setChosenAnswer, setAnswer } from "./quizSlice";
+import { setQuestions, resetQuiz, fetchRandomQuestions } from "./quizSlice";
 import { topicsApi, quizzesApi } from "../../services/api.js";
 import QuizPageNew from "./QuizPageNew";
 
@@ -9,7 +9,7 @@ function Quiz() {
   const { type } = useParams(); // Get the topic name from URL
   const [searchParams] = useSearchParams();
   const isRandomQuiz = searchParams.get('random') === 'true';
-  const { questions, index, isRandomQuiz: storeIsRandomQuiz, randomTopic, usedQuestionIds, currentBatch } = useSelector((state) => state.quiz);
+  const { questions, index, isRandomQuiz: storeIsRandomQuiz, randomTopic, usedQuestionIds } = useSelector((state) => state.quiz);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentQuiz, setCurrentQuiz] = useState(null);
@@ -160,7 +160,7 @@ function Quiz() {
     if (type) {
       loadQuizData();
     }
-  }, [type, dispatch, isRandomQuiz, storeIsRandomQuiz, randomTopic]);
+  }, [type, dispatch, isRandomQuiz, storeIsRandomQuiz, randomTopic, usedQuestionIds]);
 
   if (loading) {
     return (

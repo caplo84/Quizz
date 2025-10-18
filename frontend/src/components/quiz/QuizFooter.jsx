@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { ChevronLeft, ChevronRight, Send, Flag, CheckCircle, Clock } from 'lucide-react';
 
 const QuizFooter = ({ 

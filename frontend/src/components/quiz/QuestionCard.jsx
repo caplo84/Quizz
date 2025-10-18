@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { Code2 } from 'lucide-react';
 import CodeBlock from '../../ui/CodeBlock';
 import ImageDisplay from '../../ui/ImageDisplay';

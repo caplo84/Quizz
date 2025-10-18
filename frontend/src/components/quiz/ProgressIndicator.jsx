@@ -1,4 +1,4 @@
-import React from 'react';
+
 
 const ProgressIndicator = ({ current, total, percentage, darkMode }) => {
   return (

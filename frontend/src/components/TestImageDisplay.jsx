@@ -1,4 +1,4 @@
-import React from 'react';
+
 import ImageDisplay from '../ui/ImageDisplay';
 import CodeBlock from '../ui/CodeBlock';
 

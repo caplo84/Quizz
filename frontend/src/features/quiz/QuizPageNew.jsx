@@ -11,7 +11,6 @@ import QuizSidebar from "../../components/quiz/QuizSidebar";
 import "../../components/quiz/QuizComponents.css";
 
 function QuizPageNew({ question, quiz }) {
-  const [userAnswer, setUserAnswer] = useState("");
   const [showExplanation, setShowExplanation] = useState(false);
   const [answeredQuestions, setAnsweredQuestions] = useState([]);
   const [flaggedQuestions, setFlaggedQuestions] = useState([]); // Track flagged questions
@@ -20,7 +19,7 @@ function QuizPageNew({ question, quiz }) {
   const [searchParams] = useSearchParams();
   const isRandomFromURL = searchParams.get('random') === 'true';
 
-  const { index, questions, chosenAnswer, correctAnswer, score, isRandomQuiz, randomTopic } = useSelector(
+  const { index, questions, chosenAnswer, score, isRandomQuiz, randomTopic } = useSelector(
     (state) => state.quiz,
   );
   const { darkMode } = useSelector((state) => state.home);
@@ -212,6 +211,7 @@ function QuizPageNew({ question, quiz }) {
         onSubmit={handleFinishQuiz}
         isLastQuestion={isLastQuestion}
         showExplanation={showExplanation}
+        onToggleExplanation={() => setShowExplanation(!showExplanation)}
         isFlagged={flaggedQuestions.includes(index)}
         onFlag={handleToggleFlag}
         answered={answeredQuestions.length}

@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { CheckCircle, XCircle, Lightbulb } from 'lucide-react';
 
 const ExplanationCard = ({ isCorrect, explanation, darkMode }) => {

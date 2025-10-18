@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { CheckCircle2, Circle, Flag } from 'lucide-react';
 
 const QuickStats = ({ answered, remaining, flagged, score, darkMode }) => {
