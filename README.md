@@ -1,6 +1,4 @@
-# 🎯 Quizz - Interactive Quiz Platform
-
-> A modern full-stack quiz application featuring **code syntax highlighting**, **image support**, and **random question generation** from LinkedIn skill assessments.
+# 🎯 Quizz
 
 ## ✨ Key Features
 
@@ -28,14 +26,3 @@ docker-compose -f deployment/docker-compose.development.yml up
 **Frontend:** React + Vite + Tailwind CSS + Redux Toolkit  
 **Backend:** Go + Gin + PostgreSQL + Redis  
 **Content:** Auto-synced from [LinkedIn Skill Assessments](https://github.com/Ebazhanov/linkedin-skill-assessments-quizzes)
-
-## 📊 Architecture Highlights
-
-- **Content Separation**: Code blocks and images stored separately for optimal rendering
-- **Batch Processing**: Smart question batching to avoid repeats
-- **Image Pipeline**: Auto-download and standardization from GitHub
-- **Performance**: Redis caching + optimized database queries
-
-## 🎮 Demo
-
-Try the **Random Quiz Mode** - it intelligently selects questions you haven't seen yet, making each session unique!
