@@ -7,9 +7,63 @@ import Error from "./ui/Error";
 import FinishedScreen from "./ui/FinishedScreen";
 import ConnectionStatus from "./ui/ConnectionStatus";
 import TestImageDisplay from './components/TestImageDisplay';
+import AdminLayout from "./features/admin/AdminLayout";
+import AdminLogin from "./features/admin/AdminLogin";
+import AdminDashboard from "./features/admin/AdminDashboard";
+import QuizManagement from "./features/admin/QuizManagement";
+import QuizForm from "./features/admin/QuizForm";
+import TopicManagement from "./features/admin/TopicManagement";
+import SyncManagement from "./features/admin/SyncManagement";
+import BulkOperations from "./features/admin/BulkOperations";
 
 function App() {
   const router = createBrowserRouter([
+    {
+      path: "/admin/login",
+      element: <AdminLogin />,
+    },
+    {
+      path: "/admin",
+      element: <AdminLayout />,
+      children: [
+        {
+          index: true,
+          element: <AdminDashboard />,
+        },
+        {
+          path: "quizzes",
+          element: <QuizManagement />,
+        },
+        {
+          path: "quizzes/new",
+          element: <QuizForm />,
+        },
+        {
+          path: "quizzes/:id/edit",
+          element: <QuizForm />,
+        },
+        {
+          path: "topics",
+          element: <TopicManagement />,
+        },
+        {
+          path: "topics/new",
+          element: <TopicManagement />,
+        },
+        {
+          path: "sync",
+          element: <SyncManagement />,
+        },
+        {
+          path: "bulk",
+          element: <BulkOperations />,
+        },
+        {
+          path: "analytics",
+          element: <AdminDashboard />,
+        },
+      ],
+    },
     {
       element: <AppLayout />,
 
