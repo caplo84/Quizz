@@ -12,13 +12,23 @@ import (
 type AdminHandler struct {
 	adminService      services.AdminService
 	githubSyncService services.GitHubSyncService
+	questionCorrector services.QuestionCorrector
 }
 
-func NewAdminHandler(adminService services.AdminService, githubSyncService services.GitHubSyncService) *AdminHandler {
+func NewAdminHandler(adminService services.AdminService, githubSyncService services.GitHubSyncService, questionCorrector services.QuestionCorrector) *AdminHandler {
 	return &AdminHandler{
 		adminService:      adminService,
 		githubSyncService: githubSyncService,
+		questionCorrector: questionCorrector,
 	}
+}
+
+type QuestionCorrectionRequest struct {
+	QuizSlug            string  `json:"quiz_slug"`
+	DryRun              *bool   `json:"dry_run"`
+	BatchSize           *int    `json:"batch_size"`
+	ConfidenceThreshold float64 `json:"confidence_threshold"`
+	Verbose             bool    `json:"verbose"`
 }
 
 // CreateQuiz handles POST /admin/quizzes
@@ -100,6 +110,109 @@ func (h *AdminHandler) DeleteQuiz(c *gin.Context) {
 	})
 }
 
+// GetQuizByID handles GET /admin/quizzes/:id
+func (h *AdminHandler) GetQuizByID(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid quiz ID",
+		})
+		return
+	}
+
+	quiz, err := h.adminService.GetQuizByID(c.Request.Context(), uint(id))
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "Quiz not found",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data": quiz,
+	})
+}
+
+// CreateTopic handles POST /admin/topics
+func (h *AdminHandler) CreateTopic(c *gin.Context) {
+	var topic models.Topic
+
+	if err := c.ShouldBindJSON(&topic); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid request body",
+		})
+		return
+	}
+
+	if err := h.adminService.CreateTopic(c.Request.Context(), &topic); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to create topic",
+		})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{
+		"data": topic,
+	})
+}
+
+// UpdateTopic handles PUT /admin/topics/:id
+func (h *AdminHandler) UpdateTopic(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid topic ID",
+		})
+		return
+	}
+
+	var topic models.Topic
+	if err := c.ShouldBindJSON(&topic); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid request body",
+		})
+		return
+	}
+
+	topic.ID = uint(id)
+
+	if err := h.adminService.UpdateTopic(c.Request.Context(), &topic); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to update topic",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data": topic,
+	})
+}
+
+// DeleteTopic handles DELETE /admin/topics/:id
+func (h *AdminHandler) DeleteTopic(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid topic ID",
+		})
+		return
+	}
+
+	if err := h.adminService.DeleteTopic(c.Request.Context(), uint(id)); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to delete topic",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Topic deleted successfully",
+	})
+}
+
 // SyncGitHubData handles POST /admin/sync-github
 func (h *AdminHandler) SyncGitHubData(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -148,5 +261,58 @@ func (h *AdminHandler) DownloadAllTopicImages(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "All topic images download completed successfully",
+	})
+}
+
+// CorrectQuestions handles POST /api/admin/questions/correct
+func (h *AdminHandler) CorrectQuestions(c *gin.Context) {
+	if h.questionCorrector == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{
+			"error": "Question corrector service is not configured",
+		})
+		return
+	}
+
+	var req QuestionCorrectionRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		// allow empty body by ignoring EOF-style bind errors
+		req = QuestionCorrectionRequest{}
+	}
+
+	dryRun := true
+	if req.DryRun != nil {
+		dryRun = *req.DryRun
+	}
+
+	batchSize := 100
+	if req.BatchSize != nil && *req.BatchSize > 0 {
+		batchSize = *req.BatchSize
+	}
+
+	confidenceThreshold := req.ConfidenceThreshold
+	if confidenceThreshold <= 0 {
+		confidenceThreshold = 0.7
+	}
+
+	opts := services.CorrectionOptions{
+		QuizSlug:            req.QuizSlug,
+		DryRun:              dryRun,
+		BatchSize:           batchSize,
+		ConfidenceThreshold: confidenceThreshold,
+		Verbose:             req.Verbose,
+	}
+
+	report, err := h.questionCorrector.CorrectAllQuizzes(c.Request.Context(), opts)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Question correction failed",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Question correction completed",
+		"report":  report,
 	})
 }

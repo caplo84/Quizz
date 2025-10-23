@@ -247,11 +247,13 @@ func (app *Application) setupRouter() *gin.Engine {
 	attemptHandler := handlers.NewAttemptHandler(attemptService, quizService)
 
 	adminService := services.NewAdminService(quizRepo, app.Cache, githubClient, topicRepo)
+	aiAnswerService := services.NewAIAnswerServiceFromEnv()
+	questionCorrector := services.NewQuizCorrectorService(app.DB, githubClient, aiAnswerService)
 
 	// Create GitHub sync service
 	githubSyncService := services.NewGitHubSyncService(githubClient, quizRepo, topicRepo)
 
-	adminHandler := handlers.NewAdminHandler(adminService, githubSyncService)
+	adminHandler := handlers.NewAdminHandler(adminService, githubSyncService, questionCorrector)
 
 	// Serve static files for quiz images
 	router.Static("/static", "./static")
@@ -275,9 +277,14 @@ func (app *Application) setupRouter() *gin.Engine {
 		// Admin routes
 		admin := v1.Group("/admin")
 		{
+			admin.GET("/quizzes/:id", adminHandler.GetQuizByID)
 			admin.POST("/quizzes", adminHandler.CreateQuiz)
 			admin.PUT("/quizzes/:id", adminHandler.UpdateQuiz)
 			admin.DELETE("/quizzes/:id", adminHandler.DeleteQuiz)
+
+			admin.POST("/topics", adminHandler.CreateTopic)
+			admin.PUT("/topics/:id", adminHandler.UpdateTopic)
+			admin.DELETE("/topics/:id", adminHandler.DeleteTopic)
 		}
 	}
 
@@ -286,6 +293,7 @@ func (app *Application) setupRouter() *gin.Engine {
 		adminRoutes.POST("/sync/github", adminHandler.SyncGitHubData)
 		adminRoutes.GET("/sync/github/status", adminHandler.GetGitHubSyncStatus)
 		adminRoutes.POST("/download-all-topic-images", adminHandler.DownloadAllTopicImages)
+		adminRoutes.POST("/questions/correct", adminHandler.CorrectQuestions)
 	}
 
 	router.GET("/health", healthHandler.HealthCheck)

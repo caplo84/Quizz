@@ -14,6 +14,10 @@ type AdminService interface {
 	CreateQuiz(ctx context.Context, quiz *models.Quiz) error
 	UpdateQuiz(ctx context.Context, quiz *models.Quiz) error
 	DeleteQuiz(ctx context.Context, id uint) error
+	GetQuizByID(ctx context.Context, id uint) (*models.Quiz, error)
+	CreateTopic(ctx context.Context, topic *models.Topic) error
+	UpdateTopic(ctx context.Context, topic *models.Topic) error
+	DeleteTopic(ctx context.Context, id uint) error
 	DownloadAllTopicImages(ctx context.Context) error
 }
 
@@ -43,6 +47,22 @@ func (s *adminService) UpdateQuiz(ctx context.Context, quiz *models.Quiz) error 
 
 func (s *adminService) DeleteQuiz(ctx context.Context, id uint) error {
 	return s.quizRepo.DeleteQuiz(ctx, id)
+}
+
+func (s *adminService) GetQuizByID(ctx context.Context, id uint) (*models.Quiz, error) {
+	return s.quizRepo.GetQuizByID(ctx, id)
+}
+
+func (s *adminService) CreateTopic(ctx context.Context, topic *models.Topic) error {
+	return s.topicRepo.CreateTopic(ctx, topic)
+}
+
+func (s *adminService) UpdateTopic(ctx context.Context, topic *models.Topic) error {
+	return s.topicRepo.UpdateTopic(ctx, topic)
+}
+
+func (s *adminService) DeleteTopic(ctx context.Context, id uint) error {
+	return s.topicRepo.DeleteTopic(ctx, id)
 }
 
 func (s *adminService) DownloadAllTopicImages(ctx context.Context) error {

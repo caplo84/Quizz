@@ -45,3 +45,11 @@ func (r *topicRepository) GetBySlug(ctx context.Context, slug string) (*models.T
 func (r *topicRepository) Create(ctx context.Context, topic *models.Topic) error {
 	return r.db.WithContext(ctx).Create(topic).Error
 }
+
+func (r *topicRepository) UpdateTopic(ctx context.Context, topic *models.Topic) error {
+	return r.db.WithContext(ctx).Save(topic).Error
+}
+
+func (r *topicRepository) DeleteTopic(ctx context.Context, id uint) error {
+	return r.db.WithContext(ctx).Delete(&models.Topic{}, id).Error
+}

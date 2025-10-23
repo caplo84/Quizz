@@ -11,6 +11,8 @@ type TopicRepository interface {
 	GetBySlug(ctx context.Context, slug string) (*models.Topic, error)
 	Create(ctx context.Context, topic *models.Topic) error
 	CreateTopic(ctx context.Context, topic *models.Topic) error
+	UpdateTopic(ctx context.Context, topic *models.Topic) error
+	DeleteTopic(ctx context.Context, id uint) error
 }
 
 type QuizRepository interface {
