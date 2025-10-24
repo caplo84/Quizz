@@ -85,6 +85,11 @@ type Choice struct {
 	OrderIndex  int     `json:"order_index" gorm:"not null" validate:"required,min=1"`
 	Explanation *string `json:"explanation,omitempty" gorm:"type:text"`
 
+	// Correction metadata
+	AnswerSource string     `json:"answer_source,omitempty" gorm:"size:50;default:parsed"`
+	AIConfidence float64    `json:"ai_confidence,omitempty" gorm:"type:decimal(3,2);default:0.00"`
+	CorrectedAt  *time.Time `json:"corrected_at,omitempty"`
+
 	// Code and image fields
 	ChoiceCode         *string `json:"choice_code,omitempty" gorm:"type:text"`
 	ChoiceCodeLanguage *string `json:"choice_code_language,omitempty" gorm:"size:50"`
