@@ -3,30 +3,47 @@ import config from '../config/api.js';
 class ApiClient {
   constructor() {
     this.baseURL = config.API_BASE;
+    this.fallbackBaseURL = '/api/v1';
   }
 
   async request(endpoint, options = {}) {
-    const url = `${this.baseURL}${endpoint}`;
-    
-    try {
-      const response = await fetch(url, {
+    const requestOptions = {
         headers: {
           'Content-Type': 'application/json',
           ...options.headers,
         },
         ...options,
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      };
+
+    const candidates = [this.baseURL, this.fallbackBaseURL];
+    let lastError = null;
+
+    for (const base of candidates) {
+      const url = `${base}${endpoint}`;
+
+      try {
+        const response = await fetch(url, requestOptions);
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return data;
+      } catch (error) {
+        lastError = error;
+
+        // Retry with fallback for network-level failures only
+        if (error instanceof TypeError) {
+          continue;
+        }
+
+        throw error;
       }
-      
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error('💥 Request failed:', error); // DEBUG
-      throw error;
     }
+
+    console.error('💥 Request failed:', lastError);
+    throw lastError;
   }
 
   // HTTP Methods

@@ -2,8 +2,9 @@ import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { resetQuiz, startNewBatch, fetchQuestionsWithAnswers } from "../features/quiz/quizSlice";
 import { resetMode } from "../features/home/homeSlice";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { buttonStyles, textStyles, cardStyles } from "../utils/commonStyles";
+import { addAttempt, getCurrentUser } from "../utils/attemptHistory";
 
 function FinishedScreen() {
   const { name, icon } = useSelector((state) => state.home);
@@ -12,6 +13,7 @@ function FinishedScreen() {
   const [searchParams] = useSearchParams();
   const [showReview, setShowReview] = useState(false);
   const [isLoadingAnswers, setIsLoadingAnswers] = useState(false);
+  const hasSavedAttemptRef = useRef(false);
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -28,6 +30,28 @@ function FinishedScreen() {
       .finally(() => setIsLoadingAnswers(false));
     }
   }, [showReview, dispatch, randomTopic, userAnswers, isLoadingAnswers]);
+
+  useEffect(() => {
+    if (hasSavedAttemptRef.current) return;
+    if (!questions?.length) return;
+
+    const user = getCurrentUser();
+    const topicName = randomTopic?.name || name || "Unknown Topic";
+    const topicSlug = randomTopic?.slug || topicName.toLowerCase().replace(/\s+/g, "-");
+    const percentage = Math.round((score / questions.length) * 100);
+
+    addAttempt({
+      userName: user?.name || "Anonymous",
+      topicName,
+      topicSlug,
+      score,
+      totalQuestions: questions.length,
+      percentage,
+      durationSeconds: 0,
+    });
+
+    hasSavedAttemptRef.current = true;
+  }, [questions, score, randomTopic, name]);
 
   const bgColors = {
     HTML: "#FFF1E9",

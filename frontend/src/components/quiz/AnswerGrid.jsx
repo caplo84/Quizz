@@ -36,11 +36,11 @@ const AnswerOption = ({
   return (
     <div 
       className={`${getOptionClass()} ${darkMode ? 'dark-mode' : ''}`}
-      onClick={() => !showCorrect && onClick(id)}
+      onClick={() => !showCorrect && onClick()}
     >
       <div className="answer-option-header">
         <div className={`option-label ${getOptionLabelClass()}`}>
-          {id.toUpperCase()}
+          {String(id || '').toUpperCase()}
         </div>
         {showCorrect && isCorrect && (
           <div className="result-icon correct-icon">
@@ -81,15 +81,22 @@ const AnswerGrid = ({
   codeLanguage,
   darkMode 
 }) => {
-  const optionLabels = ['a', 'b', 'c', 'd', 'e', 'f'];
+  const getOptionLabel = (index) => {
+    // a-z, then fallback to numeric labels (27, 28, ...)
+    if (index < 26) {
+      return String.fromCharCode(97 + index);
+    }
+
+    return String(index + 1);
+  };
   
   return (
     <div className="answer-grid">
       {options.map((option, index) => {
-        const optionId = optionLabels[index];
+        const optionId = getOptionLabel(index);
         return (
           <AnswerOption
-            key={optionId}
+            key={`${optionId}-${index}`}
             id={optionId}
             code={hasCode ? option : null}
             text={!hasCode ? option : null}

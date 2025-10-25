@@ -12,6 +12,10 @@ export const topicsApi = {
   getQuizzes: async (topicSlug) => {
     // Use the backend endpoint that accepts topic slugs directly
     const response = await apiClient.get(`/topics/${topicSlug}/quizzes`);
-    return response.data || response;
+    const quizzes = response.data || response;
+    if (!Array.isArray(quizzes)) return [];
+
+    // Hide unpublished/inactive quizzes from public flows
+    return quizzes.filter((quiz) => quiz?.is_active !== false);
   },
 };

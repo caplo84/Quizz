@@ -1,11 +1,10 @@
 // API base URL configuration
-const API_BASE_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/v1`;
+const EXTERNAL_API_BASE_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/v1`;
+const SAME_ORIGIN_API_BASE_URL = '/api/v1';
 
 // Generic API request function
 async function apiRequest(endpoint, options = {}) {
-  const url = `${API_BASE_URL}${endpoint}`;
-  
-  const config = {
+  const requestConfig = {
     headers: {
       'Content-Type': 'application/json',
       ...options.headers,
@@ -13,27 +12,42 @@ async function apiRequest(endpoint, options = {}) {
     ...options,
   };
 
-  try {
-    const response = await fetch(url, config);
-    
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+  const baseCandidates = [EXTERNAL_API_BASE_URL, SAME_ORIGIN_API_BASE_URL];
+  let lastError = null;
+
+  for (const base of baseCandidates) {
+    const url = `${base}${endpoint}`;
+
+    try {
+      const response = await fetch(url, requestConfig);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      // Backend returns data wrapped in {success: true, data: [...]}
+      if (result.success && result.data) {
+        return result.data;
+      }
+
+      return result;
+    } catch (error) {
+      lastError = error;
+
+      // Retry with next base only for network-level failures
+      if (error instanceof TypeError) {
+        continue;
+      }
+
+      throw error;
     }
-    
-    const result = await response.json();
-    
-    // Backend returns data wrapped in {success: true, data: [...]}
-    if (result.success && result.data) {
-      return result.data;
-    }
-    
-    // Fallback if structure is different
-    return result;
-  } catch (error) {
-    console.error(`💥 API request failed for ${endpoint}:`, error);
-    throw error;
   }
+
+  console.error(`💥 API request failed for ${endpoint}:`, lastError);
+  throw lastError;
 }
 
 // API functions for the quiz application
@@ -108,27 +122,35 @@ export async function getQuiz() {
         // Check if this topic has quizzes by trying to fetch them
         let quizCount = 0;
         try {
-          const topicQuizzes = await apiRequest(`/topics/${topic.slug}/quizzes`);
-          if (Array.isArray(topicQuizzes)) {
-            quizCount = topicQuizzes.length;
+          const topicQuizzesResponse = await apiRequest(`/topics/${topic.slug}/quizzes`);
+          const topicQuizzes = Array.isArray(topicQuizzesResponse)
+            ? topicQuizzesResponse
+            : Array.isArray(topicQuizzesResponse?.data)
+              ? topicQuizzesResponse.data
+              : [];
+
+          if (Array.isArray(topicQuizzes) && topicQuizzes.length > 0) {
+            const activeQuizzes = topicQuizzes.filter((quiz) => quiz?.is_active !== false);
+            quizCount = activeQuizzes.length;
           }
         } catch (error) {
-          // For original topics (manual), assume they have quizzes even if API fails
+          // Keep existing UX resilient if a topic quiz endpoint intermittently fails.
           if (source === 'manual') {
-            quizCount = 1; // Assume at least 1 quiz exists for original topics
+            quizCount = 1;
           }
         }
-        
-        // Each topic becomes a selectable quiz item on the home page
-        quizItems.push({
-          title: topic.name,  
-          icon: iconUrl,
-          slug: topic.slug || topic.name.toLowerCase().replace(/\s+/g, '-'),
-          id: topic.id,
-          description: topic.description || `Test your knowledge of ${topic.name}`,
-          source: source,
-          quizCount: quizCount
-        });
+
+        if (quizCount > 0) {
+          quizItems.push({
+            title: topic.name,
+            icon: iconUrl,
+            slug: topic.slug || topic.name.toLowerCase().replace(/\s+/g, '-'),
+            id: topic.id,
+            description: topic.description || `Test your knowledge of ${topic.name}`,
+            source: source,
+            quizCount: quizCount,
+          });
+        }
       }
     }
     

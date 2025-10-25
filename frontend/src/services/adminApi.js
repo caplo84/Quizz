@@ -37,6 +37,7 @@ const adminApi = {
       difficulty_level: quizData.difficulty_level || 'medium',
       time_limit_minutes: Number(quizData.time_limit_minutes || 30),
       total_questions: questions.length,
+      is_active: quizData.is_active !== undefined ? Boolean(quizData.is_active) : true,
       questions,
     };
   },
@@ -53,6 +54,7 @@ const adminApi = {
     topicId: quiz.topic_id || topic?.id || quiz.topicId,
     topicSlug: quiz.topic?.slug || quiz.topic_slug || topic?.slug || quiz.topicSlug || '',
     totalQuestions: quiz.total_questions || quiz.totalQuestions || quiz.questions?.length || 0,
+    isActive: quiz.is_active !== undefined ? Boolean(quiz.is_active) : true,
   }),
 
   // ==================== Quiz Operations ====================
@@ -115,6 +117,9 @@ const adminApi = {
         slug: quiz.slug || '',
         description: quiz.description || '',
         topic: quiz.topic_id || quiz.topic?.id || '',
+        difficulty_level: quiz.difficulty_level || 'medium',
+        time_limit_minutes: quiz.time_limit_minutes || 30,
+        is_active: quiz.is_active !== undefined ? Boolean(quiz.is_active) : true,
         questions: mappedQuestions,
       };
     } catch (error) {
@@ -143,6 +148,24 @@ const adminApi = {
       return await apiClient.put(`/admin/quizzes/${id}`, adminApi.toQuizPayload(quizData));
     } catch (error) {
       console.error(`Failed to update quiz ${id}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Publish/Unpublish quiz by toggling is_active
+   */
+  setQuizPublicationStatus: async (id, shouldPublish) => {
+    try {
+      const existingQuiz = await adminApi.getQuizById(id);
+      const payload = {
+        ...existingQuiz,
+        is_active: Boolean(shouldPublish),
+      };
+
+      return await adminApi.updateQuiz(id, payload);
+    } catch (error) {
+      console.error(`Failed to set publication status for quiz ${id}:`, error);
       throw error;
     }
   },

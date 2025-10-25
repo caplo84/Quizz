@@ -9,11 +9,11 @@ const AdminLayout = () => {
 
   // Redirect to login if not authenticated or not admin
   if (!user) {
-    return <Navigate to="/admin/login" replace />;
+    return <Navigate to="/admin/login?reason=auth_required" replace />;
   }
 
   if (!user.isAdmin) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/admin/login?reason=unauthorized" replace />;
   }
 
   return (

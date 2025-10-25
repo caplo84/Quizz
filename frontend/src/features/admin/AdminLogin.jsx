@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { setUser } from './authSlice';
 
 const AdminLogin = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const dispatch = useDispatch();
   const [formData, setFormData] = useState({
     email: '',
@@ -12,6 +13,14 @@ const AdminLogin = () => {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const reason = searchParams.get('reason');
+  const reasonMessage =
+    reason === 'unauthorized'
+      ? 'Admin access is required for this page.'
+      : reason === 'auth_required'
+        ? 'Please sign in to continue.'
+        : '';
 
   const handleChange = (e) => {
     setFormData({
@@ -56,6 +65,12 @@ const AdminLogin = () => {
           <h1 className="text-3xl font-bold text-gray-800 mb-2">Quiz Admin</h1>
           <p className="text-gray-600">Sign in to access the admin panel</p>
         </div>
+
+        {reasonMessage && (
+          <div className="mb-4 bg-amber-50 border border-amber-200 text-amber-700 px-4 py-3 rounded-lg text-sm">
+            {reasonMessage}
+          </div>
+        )}
 
         {/* Login Form */}
         <form onSubmit={handleSubmit} className="space-y-6">

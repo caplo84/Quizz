@@ -10,6 +10,8 @@ const QuizForm = () => {
   const isEditMode = Boolean(id);
 
   const [loading, setLoading] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const [validationErrors, setValidationErrors] = useState([]);
   const [topics, setTopics] = useState([]);
   const [formData, setFormData] = useState({
     title: '',
@@ -64,6 +66,7 @@ const QuizForm = () => {
   };
 
   const handleTitleChange = (e) => {
+    setSubmitError('');
     const newTitle = e.target.value;
     setFormData({
       ...formData,
@@ -73,52 +76,73 @@ const QuizForm = () => {
   };
 
   const handleChange = (e) => {
+    setSubmitError('');
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
     });
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    // Validation
-    if (!formData.title || !formData.slug) {
-      alert('Please fill in all required fields.');
-      return;
+  const validateForm = () => {
+    const errors = [];
+
+    if (!formData.title?.trim()) {
+      errors.push('Title is required.');
+    }
+
+    if (!formData.slug?.trim()) {
+      errors.push('Slug is required.');
     }
 
     if (!formData.topic) {
-      alert('Please select a topic.');
-      return;
+      errors.push('Please select a topic.');
     }
 
-    if (formData.questions.length === 0) {
-      alert('Please add at least one question.');
-      return;
+    if (!Array.isArray(formData.questions) || formData.questions.length === 0) {
+      errors.push('Add at least one question.');
     }
 
-    for (let i = 0; i < formData.questions.length; i++) {
-      const q = formData.questions[i];
-      if (!q.question || q.choices.some(c => !c) || !q.correctAnswers || q.correctAnswers.length === 0) {
-        alert(`Question ${i + 1} is incomplete. Please fill in all fields and select correct answer(s).`);
-        return;
+    (formData.questions || []).forEach((question, qIndex) => {
+      const questionNumber = qIndex + 1;
+      if (!question.question?.trim()) {
+        errors.push(`Question ${questionNumber}: question text is required.`);
       }
+
+      const choices = Array.isArray(question.choices) ? question.choices : [];
+      if (choices.length === 0 || choices.some((choice) => !String(choice || '').trim())) {
+        errors.push(`Question ${questionNumber}: all choices must be filled.`);
+      }
+
+      if (!Array.isArray(question.correctAnswers) || question.correctAnswers.length === 0) {
+        errors.push(`Question ${questionNumber}: mark at least one correct answer.`);
+      }
+    });
+
+    return errors;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    setSubmitError('');
+    const errors = validateForm();
+    setValidationErrors(errors);
+
+    if (errors.length > 0) {
+      return;
     }
 
     try {
       setLoading(true);
       if (isEditMode) {
         await adminApi.updateQuiz(id, formData);
-        alert('Quiz updated successfully!');
       } else {
         await adminApi.createQuiz(formData);
-        alert('Quiz created successfully!');
       }
       navigate('/admin/quizzes');
     } catch (error) {
       console.error('Failed to save quiz:', error);
-      alert('Failed to save quiz. Please try again.');
+      setSubmitError('Failed to save quiz. Please check the data and try again.');
     } finally {
       setLoading(false);
     }
@@ -153,6 +177,23 @@ const QuizForm = () => {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        {validationErrors.length > 0 && (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+            <h3 className="text-sm font-semibold text-amber-800 mb-2">Please fix the following:</h3>
+            <ul className="list-disc list-inside text-sm text-amber-700 space-y-1">
+              {validationErrors.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {submitError && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-700">
+            {submitError}
+          </div>
+        )}
+
         {/* Basic Information */}
         <div className="bg-white rounded-lg shadow-md p-6 space-y-4">
           <h2 className="text-xl font-bold text-gray-900 mb-4">Basic Information</h2>
