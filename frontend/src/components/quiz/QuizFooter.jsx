@@ -4,7 +4,6 @@ import { ChevronLeft, ChevronRight, Send, Flag, CheckCircle, Clock } from 'lucid
 const QuizFooter = ({ 
   hasPrevious, 
   hasNext, 
-  selectedAnswer, 
   onPrevious, 
   onNext, 
   onSubmit,

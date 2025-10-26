@@ -7,7 +7,7 @@ import { buttonStyles, textStyles, cardStyles } from "../utils/commonStyles";
 
 function FinishedScreen() {
   const { name, icon } = useSelector((state) => state.home);
-  const { score, questions, isRandomQuiz, randomTopic, userAnswers } = useSelector((state) => state.quiz);
+  const { score, questions, randomTopic, userAnswers } = useSelector((state) => state.quiz);
   const { darkMode } = useSelector((state) => state.home);
   const [searchParams] = useSearchParams();
   const [showReview, setShowReview] = useState(false);

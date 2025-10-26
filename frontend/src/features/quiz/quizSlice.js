@@ -46,7 +46,7 @@ export const fetchRandomQuestions = createAsyncThunk(
 
 export const fetchQuestionsWithAnswers = createAsyncThunk(
   "quiz/fetchQuestionsWithAnswers",
-  async ({ topicSlug, questionIds }) => {
+  async ({ topicSlug }) => {
     // We'll fetch specific questions by their IDs with answers
     // For now, since we don't have a specific endpoint, we'll use the same random endpoint
     // but this should ideally be a different endpoint that accepts question IDs

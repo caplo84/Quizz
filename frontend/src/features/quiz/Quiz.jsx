@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useParams, useSearchParams } from "react-router-dom";
 import { setQuestions, resetQuiz, fetchRandomQuestions } from "./quizSlice";
-import { topicsApi, quizzesApi } from "../../services/api.js";
+import { topicsApi } from "../../services/api.js";
 import QuizPageNew from "./QuizPageNew";
 
 function Quiz() {
