@@ -7,45 +7,16 @@ const QuestionCard = ({
   question, 
   code, 
   codeLanguage,
-  difficulty, 
-  tags, 
   imageUrl, 
   imageAlt,
   topic,
   darkMode 
 }) => {
-  const difficultyColors = {
-    easy: darkMode ? 'bg-green-900 text-green-200' : 'bg-green-100 text-green-800',
-    medium: darkMode ? 'bg-yellow-900 text-yellow-200' : 'bg-yellow-100 text-yellow-800',
-    hard: darkMode ? 'bg-red-900 text-red-200' : 'bg-red-100 text-red-800'
-  };
-
   return (
     <div className="question-card">
-      {/* Question Header */}
-      {(difficulty || tags) && (
-        <div className="question-header mb-6">
-          <div className="question-meta flex gap-3 flex-wrap">
-            {difficulty && (
-              <span className={`difficulty-badge ${difficultyColors[difficulty]}`}>
-                {difficulty}
-              </span>
-            )}
-            {tags?.map(tag => (
-              <span 
-                key={tag} 
-                className={`tag ${darkMode ? 'bg-navy text-light-bluish' : 'bg-light-grey text-grey-navy'}`}
-              >
-                #{tag}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Question Text */}
       <div className="question-text">
-        <h2 className={`text-3xl md:text-4xl font-medium leading-tight mb-6 ${
+        <h2 className={`text-xl md:text-2xl font-semibold leading-snug mb-5 ${
           darkMode ? 'text-white' : 'text-dark-navy'
         }`}>
           {question}

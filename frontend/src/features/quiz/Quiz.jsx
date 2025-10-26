@@ -5,6 +5,78 @@ import { setQuestions, resetQuiz, fetchRandomQuestions } from "./quizSlice";
 import { topicsApi } from "../../services/api.js";
 import QuizPageNew from "./QuizPageNew";
 
+const normalizeOption = (choice) => {
+  if (typeof choice === "string") {
+    return { text: choice, code: null, code_language: null, is_correct: false };
+  }
+
+  return {
+    text: choice?.choice_text || choice?.text || choice?.option || "",
+    code: choice?.choice_code || choice?.code || null,
+    code_language: choice?.choice_code_language || choice?.code_language || null,
+    is_correct: Boolean(choice?.is_correct),
+  };
+};
+
+const detectQuestionType = (question, options) => {
+  const explicitType = question?.question_type;
+  if (["single", "multiple", "true_false", "text_input"].includes(explicitType)) {
+    return explicitType;
+  }
+
+  if (question?.correct_text_answer) {
+    return "text_input";
+  }
+
+  const optionTexts = options.map((opt) => String(opt?.text || "").trim().toLowerCase());
+  if (options.length === 2 && optionTexts.includes("true") && optionTexts.includes("false")) {
+    return "true_false";
+  }
+
+  const correctCount = options.filter((opt) => opt.is_correct).length;
+  return correctCount > 1 ? "multiple" : "single";
+};
+
+const normalizeQuestion = (q) => {
+  const rawOptions = Array.isArray(q?.choices)
+    ? q.choices
+    : Array.isArray(q?.options)
+      ? q.options
+      : [];
+
+  const options = rawOptions.map(normalizeOption);
+  const questionType = detectQuestionType(q, options);
+  const correctIndices = options
+    .map((opt, idx) => (opt.is_correct ? idx : -1))
+    .filter((idx) => idx >= 0);
+
+  let answer = null;
+  if (questionType === "multiple") {
+    answer = correctIndices;
+  } else if (questionType === "text_input") {
+    answer = String(q?.correct_text_answer || q?.answer || "").trim();
+  } else {
+    answer = correctIndices.length > 0 ? correctIndices[0] : null;
+  }
+
+  return {
+    id: q.id,
+    question: q.question_text || q.text || q.question,
+    options,
+    answer,
+    question_type: questionType,
+    correct_text_answer: q.correct_text_answer || "",
+    // Content separation fields
+    question_image_url: q.question_image_url,
+    question_image_alt: q.question_image_alt,
+    question_code: q.question_code,
+    question_code_language: q.question_code_language,
+    difficulty: q.difficulty,
+    tags: Array.isArray(q.tags) ? q.tags : [],
+    explanation: q.explanation || "",
+  };
+};
+
 function Quiz() {
   const { type } = useParams(); // Get the topic name from URL
   const [searchParams] = useSearchParams();
@@ -44,23 +116,7 @@ function Quiz() {
             // Transform questions to match expected format
             const transformedQuestions = result.data.map((q, index) => {
               try {
-                // Find the correct answer from choices
-                const correctChoice = q.choices?.find(choice => choice.is_correct);
-                const answer = correctChoice ? correctChoice.choice_text || correctChoice.text || correctChoice.option : null;
-                
-                return {
-                  id: q.id,
-                  question: q.question_text || q.text || q.question,
-                  options: q.choices?.map(choice => choice.choice_text || choice.text || choice.option) || q.options || [],
-                  answer: answer,
-                  // Content separation fields
-                  question_image_url: q.question_image_url,
-                  question_image_alt: q.question_image_alt,
-                  question_code: q.question_code,
-                  question_code_language: q.question_code_language,
-                  choice_codes: q.choices?.map(choice => choice.choice_code) || [],
-                  choice_code_languages: q.choices?.map(choice => choice.choice_code_language) || []
-                };
+                return normalizeQuestion(q);
               } catch (error) {
                 console.error(`Error transforming question ${index}:`, error, q);
                 throw error;
@@ -112,19 +168,7 @@ function Quiz() {
             
             
             // Transform questions to match expected format
-            const transformedQuestions = result.data.map(q => ({
-              id: q.id,
-              question: q.question_text || q.text || q.question,
-              options: q.choices?.map(choice => choice.choice_text || choice.text || choice.option) || q.options || [],
-              answer: q.choices?.find(choice => choice.is_correct)?.choice_text || q.answer,
-              // Content separation fields
-              question_image_url: q.question_image_url,
-              question_image_alt: q.question_image_alt,
-              question_code: q.question_code,
-              question_code_language: q.question_code_language,
-              choice_codes: q.choices?.map(choice => choice.choice_code) || [],
-              choice_code_languages: q.choices?.map(choice => choice.choice_code_language) || []
-            }));
+            const transformedQuestions = result.data.map((q) => normalizeQuestion(q));
             
             dispatch(setQuestions(transformedQuestions));
             
@@ -157,7 +201,7 @@ function Quiz() {
     if (type) {
       loadQuizData();
     }
-  }, [type, dispatch, isRandomQuiz, storeIsRandomQuiz, randomTopic, usedQuestionIds]);
+  }, [type, dispatch, isRandomQuiz, storeIsRandomQuiz, randomTopic]);
 
   if (loading) {
     return (

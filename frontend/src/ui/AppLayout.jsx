@@ -7,22 +7,25 @@ function AppLayout() {
   const { darkMode } = useSelector((state) => state.home);
   const location = useLocation();
   const isHomePage = location.pathname === '/';
+  const staticRoutes = new Set(['/legacy', '/login', '/leaderboard', '/dashboard', '/finished', '/test-images']);
+  const isQuizPage = !isHomePage && !staticRoutes.has(location.pathname);
+  const isFullBleedPage = isHomePage || isQuizPage;
 
   return (
     <div
       className={`relative min-h-screen font-rubik transition-all duration-300 ${
-        isHomePage 
-          ? '' // No background styling for home page (let Home component handle it)
+        isFullBleedPage
+          ? '' // Full-bleed pages handle their own layout (home + quiz)
           : `laptop:px-24 desktop:py-16 mobile:py-8 mobile:px-8 grid grid-rows-[auto_1fr] overflow-hidden px-56 py-32 ${
               darkMode ? "bg-dark-navy" : "bg-light-grey"
             }`
       }`}
     >
-      {!isHomePage && <Header />}
-      <main className={isHomePage ? '' : 'z-[2]'}>
+      {!isFullBleedPage && <Header />}
+      <main className={isFullBleedPage ? '' : 'z-[2]'}>
         <Outlet />
       </main>
-      {!isHomePage && <PageDesign />}
+      {!isFullBleedPage && <PageDesign />}
     </div>
   );
 }

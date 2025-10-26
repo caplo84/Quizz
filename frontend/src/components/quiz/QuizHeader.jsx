@@ -1,45 +1,53 @@
 
-import { X, Clock } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-const QuizHeader = ({ topicName, currentQuestion, totalQuestions, timeRemaining, darkMode }) => {
+const QuizHeader = ({ topicName, currentQuestion, totalQuestions, answeredCount = 0, darkMode }) => {
   const navigate = useNavigate();
+  const progress = totalQuestions > 0 ? Math.round((currentQuestion / totalQuestions) * 100) : 0;
 
   const handleExit = () => {
-    if (window.confirm('Are you sure you want to exit? Your progress will be lost.')) {
-      navigate('/');
-    }
+    navigate('/');
   };
 
   return (
     <header className={`quiz-header ${darkMode ? 'bg-dark-navy border-navy' : 'bg-white border-light-grey'}`}>
-      <div className="quiz-header-left">
-        <button 
-          className={`exit-button ${darkMode ? 'hover:bg-navy' : 'hover:bg-light-grey'}`}
-          onClick={handleExit}
-          aria-label="Exit quiz"
-        >
-          <X size={24} className={darkMode ? 'text-light-bluish' : 'text-dark-navy'} />
-        </button>
-        <div className="topic-info">
-          <h1 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-dark-navy'}`}>
-            {topicName}
-          </h1>
-          <span className={`text-sm ${darkMode ? 'text-light-grey' : 'text-grey-navy'}`}>
-            Question {currentQuestion} of {totalQuestions}
-          </span>
-        </div>
-      </div>
-      
-      <div className="quiz-header-right">
-        {timeRemaining !== null && timeRemaining !== undefined && (
-          <div className="timer">
-            <Clock size={20} />
-            <span className="font-semibold">
-              {Math.floor(timeRemaining / 60)}:{(timeRemaining % 60).toString().padStart(2, '0')}
+      <div className="quiz-header-inner">
+        <div className="quiz-header-top">
+          <div className="quiz-header-left">
+            <button 
+              className={`exit-button ${darkMode ? 'hover:bg-navy' : 'hover:bg-light-grey'}`}
+              onClick={handleExit}
+              aria-label="Exit quiz"
+            >
+              <ChevronLeft size={18} className={darkMode ? 'text-light-bluish' : 'text-dark-navy'} />
+            </button>
+            <div className="topic-info">
+              <h1 className={`quiz-topic-title ${darkMode ? 'text-white' : 'text-dark-navy'}`}>
+                {topicName}
+              </h1>
+              <span className={`quiz-topic-subtitle ${darkMode ? 'text-light-grey' : 'text-grey-navy'}`}>
+                Question {currentQuestion} of {totalQuestions}
+              </span>
+            </div>
+          </div>
+
+          <div className="quiz-header-right">
+            <span className={`quiz-stat ${darkMode ? 'text-light-grey' : 'text-grey-navy'}`}>
+              {progress}% complete
+            </span>
+            <span className={`quiz-stat ${darkMode ? 'text-light-grey' : 'text-grey-navy'}`}>
+              {answeredCount}/{totalQuestions} answered
             </span>
           </div>
-        )}
+        </div>
+
+        <div className={`quiz-header-progress-track ${darkMode ? 'bg-navy' : 'bg-light-grey'}`}>
+          <div
+            className="quiz-header-progress-fill"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
       </div>
     </header>
   );
