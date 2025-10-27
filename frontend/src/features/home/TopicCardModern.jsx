@@ -42,24 +42,24 @@ export default function TopicCardModern({ topic, onClick }) {
       onClick={() => onClick(topic)}
       className="w-full cursor-pointer text-left group transition-transform hover:-translate-y-1"
     >
-      <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-6 transition-shadow hover:shadow-xl">
+      <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-7 transition-shadow hover:shadow-xl min-h-[180px]">
         <div
           className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${gradient} opacity-10 rounded-full transform translate-x-8 -translate-y-8 group-hover:scale-150 transition-transform duration-500`}
         />
         <div
-          className={`w-12 h-12 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center mb-4 shadow-lg`}
+          className={`w-14 h-14 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center mb-5 shadow-lg`}
         >
-          <Icon className="w-6 h-6 text-white" />
+          <Icon className="w-7 h-7 text-white" />
         </div>
-        <h3 className="font-bold text-lg mb-1 text-gray-900 dark:text-white">{topic.title}</h3>
+        <h3 className="font-bold text-xl mb-2 text-gray-900 dark:text-white">{topic.title}</h3>
         {topic.description && (
-          <p className="text-sm text-gray-500 dark:text-gray-300 line-clamp-2 mb-3">{topic.description}</p>
+          <p className="text-base text-gray-500 dark:text-gray-300 line-clamp-2 mb-4">{topic.description}</p>
         )}
         <div className="flex items-center justify-between">
-          <span className="text-xs font-medium text-gray-500 dark:text-gray-300">
+          <span className="text-sm font-medium text-gray-500 dark:text-gray-300">
             {topic.quizCount || 0} quizzes
           </span>
-          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full bg-gradient-to-r ${gradient} text-white`}>
+          <span className={`text-sm font-semibold px-3 py-1.5 rounded-full bg-gradient-to-r ${gradient} text-white`}>
             Start →
           </span>
         </div>
