@@ -7,7 +7,7 @@ import CodeBlock from "../../ui/CodeBlock";
 import ImageDisplay from "../../ui/ImageDisplay";
 import { buttonStyles } from "../../utils/commonStyles";
 
-function QuizPage({ question, quiz }) {
+function QuizPage({ question }) {
   const [userAnswer, setUserAnswer] = useState("");
   const [isAnswered, setIsAnswered] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);

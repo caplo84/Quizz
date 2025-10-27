@@ -8,8 +8,6 @@ const QuizFooter = ({
   onPrevious, 
   onNext, 
   onSubmit,
-  isLastQuestion,
-  showExplanation,
   isFlagged,
   onFlag,
   answered,

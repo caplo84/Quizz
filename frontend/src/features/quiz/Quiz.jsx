@@ -97,9 +97,6 @@ function Quiz() {
               return;
             }
             
-            // Get the first quiz to get topic info
-            const quiz = topicQuizzes[0];
-            
             // Now load 10 random questions using the same API
             const result = await dispatch(fetchRandomQuestions({
               topicSlug: type,
@@ -131,14 +128,14 @@ function Quiz() {
             
             dispatch(setQuestions(transformedQuestions));
             
-            // Set current quiz info for regular topic using quiz data (not result.topic)
+            // Set current quiz info for regular topic
             setCurrentQuiz({
-              title: `${quiz.title || type} Quiz`,
+              title: `${topicQuizzes[0]?.title || type} Quiz`,
               slug: type,
               isRandom: false,
               topic: {
-                id: quiz.topic_id,
-                name: quiz.title || type,
+                id: topicQuizzes[0]?.topic_id,
+                name: topicQuizzes[0]?.title || type,
                 slug: type
               }
             });

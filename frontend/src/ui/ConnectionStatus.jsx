@@ -9,7 +9,7 @@ function ConnectionStatus() {
     const checkConnection = async () => {
       try {
         setIsLoading(true);
-        const result = await healthApi.check();
+        await healthApi.check();
         setIsConnected(true);
       } catch (error) {
         setIsConnected(false);

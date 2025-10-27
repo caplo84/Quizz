@@ -14,12 +14,11 @@ function QuizPageNew({ question, quiz }) {
   const [showExplanation, setShowExplanation] = useState(false);
   const [answeredQuestions, setAnsweredQuestions] = useState([]);
   const [flaggedQuestions, setFlaggedQuestions] = useState([]); // Track flagged questions
-  const [allAnswers, setAllAnswers] = useState({}); // Store all user answers by question index
   const allAnswersRef = useRef({}); // Use ref to track answers without triggering re-renders
   const [searchParams] = useSearchParams();
   const isRandomFromURL = searchParams.get('random') === 'true';
 
-  const { index, questions, chosenAnswer, score, isRandomQuiz, randomTopic } = useSelector(
+  const { index, questions, chosenAnswer, isRandomQuiz, randomTopic } = useSelector(
     (state) => state.quiz,
   );
   const { darkMode } = useSelector((state) => state.home);
@@ -37,12 +36,6 @@ function QuizPageNew({ question, quiz }) {
     
     // Save answer for this question directly in ref
     allAnswersRef.current[index] = answer;
-    
-    // Also update state for react to track (for answered count)
-    setAllAnswers(prev => ({
-      ...prev,
-      [index]: answer
-    }));
     
     // Mark as answered if not already
     if (!answeredQuestions.includes(index)) {
@@ -79,13 +72,11 @@ function QuizPageNew({ question, quiz }) {
     }
 
     // Calculate score and save all answers
-    let finalScore = 0;
     questions.forEach((question, idx) => {
       const userAnswer = finalAnswers[idx] || "";
       const isCorrect = userAnswer === question.answer;
       
       if (isCorrect) {
-        finalScore++;
         dispatch(setScore()); // Dispatch for each correct answer
       }
       
@@ -193,7 +184,6 @@ function QuizPageNew({ question, quiz }) {
             selectedAnswer={chosenAnswer}
             onAnswerSelect={handleAnswerSelect}
             showCorrect={false}
-            correctAnswer={correctAnswer}
             hasCode={hasCodeInOptions}
             codeLanguage={question.options_code_language || 'css'}
             darkMode={darkMode}

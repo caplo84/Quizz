@@ -10,7 +10,6 @@ function FinishedScreen() {
   const { score, questions, isRandomQuiz, randomTopic, userAnswers } = useSelector((state) => state.quiz);
   const { darkMode } = useSelector((state) => state.home);
   const [searchParams] = useSearchParams();
-  const isRandomFinish = searchParams.get('random') === 'true';
   const [showReview, setShowReview] = useState(false);
   const [isLoadingAnswers, setIsLoadingAnswers] = useState(false);
 
@@ -42,7 +41,7 @@ function FinishedScreen() {
   };
 
   function playAgain() {
-    if (isRandomFinish && randomTopic) {
+    if (searchParams.get('random') === 'true' && randomTopic) {
       // For random quiz, start new batch with same topic
       dispatch(startNewBatch());
       navigate(`/${randomTopic.slug}?random=true`);
