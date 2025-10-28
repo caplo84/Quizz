@@ -1,4 +1,3 @@
-import React from 'react';
 import { Download, RefreshCw, Wand2 } from 'lucide-react';
 
 const BulkActions = ({ running, onRunSync, onDownloadImages, onCorrectQuestions }) => {

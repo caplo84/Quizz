@@ -1,4 +1,4 @@
-import { CheckSquare, Circle, Square } from "lucide-react";
+import { CheckSquare, Square } from "lucide-react";
 import CodeBlock from "../../ui/CodeBlock";
 
 function getOptionText(option) {

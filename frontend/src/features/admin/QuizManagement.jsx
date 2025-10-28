@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Plus as PlusIcon,
@@ -38,7 +38,7 @@ const QuizManagement = () => {
     }
   });
 
-  const appendAudit = (action, message) => {
+  const appendAudit = useCallback((action, message) => {
     setAuditLog((current) => {
       const next = [
         {
@@ -52,17 +52,9 @@ const QuizManagement = () => {
       localStorage.setItem(AUDIT_STORAGE_KEY, JSON.stringify(next));
       return next;
     });
-  };
-
-  useEffect(() => {
-    loadQuizzes();
   }, []);
 
-  useEffect(() => {
-    setPage(1);
-  }, [searchTerm, topicFilter, statusFilter, sortBy]);
-
-  const loadQuizzes = async () => {
+  const loadQuizzes = useCallback(async () => {
     try {
       setLoading(true);
       setError('');
@@ -76,7 +68,15 @@ const QuizManagement = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [appendAudit]);
+
+  useEffect(() => {
+    loadQuizzes();
+  }, [loadQuizzes]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm, topicFilter, statusFilter, sortBy]);
 
   const handleDelete = async () => {
     if (!deleteConfirm?.id) return;
@@ -128,11 +128,11 @@ const QuizManagement = () => {
     }
   };
 
-  const uniqueTopics = React.useMemo(() => {
+  const uniqueTopics = useMemo(() => {
     return Array.from(new Set(quizzes.map((quiz) => quiz.topic).filter(Boolean)));
   }, [quizzes]);
 
-  const filteredQuizzes = React.useMemo(() => {
+  const filteredQuizzes = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
 
     return quizzes.filter((quiz) => {
@@ -155,7 +155,7 @@ const QuizManagement = () => {
     });
   }, [quizzes, searchTerm, topicFilter, statusFilter]);
 
-  const sortedQuizzes = React.useMemo(() => {
+  const sortedQuizzes = useMemo(() => {
     const next = [...filteredQuizzes];
 
     const getCount = (quiz) => Number(quiz.totalQuestions || quiz.questions?.length || 0);
@@ -183,7 +183,7 @@ const QuizManagement = () => {
 
   const pageCount = Math.max(1, Math.ceil(sortedQuizzes.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount);
-  const paginatedQuizzes = React.useMemo(() => {
+  const paginatedQuizzes = useMemo(() => {
     const start = (currentPage - 1) * PAGE_SIZE;
     return sortedQuizzes.slice(start, start + PAGE_SIZE);
   }, [sortedQuizzes, currentPage]);

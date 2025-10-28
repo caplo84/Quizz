@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft as ArrowLeftIcon } from 'lucide-react';
 import adminApi from '../../services/adminApi';
@@ -21,23 +21,16 @@ const QuizForm = () => {
     questions: [],
   });
 
-  useEffect(() => {
-    loadTopics();
-    if (isEditMode) {
-      loadQuiz();
-    }
-  }, [id]);
-
-  const loadTopics = async () => {
+  const loadTopics = useCallback(async () => {
     try {
       const data = await adminApi.getAllTopics();
       setTopics(data || []);
     } catch (error) {
       console.error('Failed to load topics:', error);
     }
-  };
+  }, []);
 
-  const loadQuiz = async () => {
+  const loadQuiz = useCallback(async () => {
     try {
       setLoading(true);
       const data = await adminApi.getQuizById(id);
@@ -54,7 +47,14 @@ const QuizForm = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, navigate]);
+
+  useEffect(() => {
+    loadTopics();
+    if (isEditMode) {
+      loadQuiz();
+    }
+  }, [isEditMode, loadQuiz, loadTopics]);
 
   const generateSlug = (title) => {
     return title

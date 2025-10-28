@@ -1,5 +1,3 @@
-import React from 'react';
-
 const statusClass = (status) => {
   if (status === 'completed' || status === 'success') return 'bg-green-50 text-green-700';
   if (status === 'running') return 'bg-blue-50 text-blue-700';

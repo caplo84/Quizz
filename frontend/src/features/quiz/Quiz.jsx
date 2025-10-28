@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useParams, useSearchParams } from "react-router-dom";
 import { setQuestions, resetQuiz, fetchRandomQuestions } from "./quizSlice";
@@ -85,10 +85,15 @@ function Quiz() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentQuiz, setCurrentQuiz] = useState(null);
+  const usedQuestionIdsRef = useRef(usedQuestionIds);
 
   const dispatch = useDispatch();
 
   const currentQuestion = questions[index];
+
+  useEffect(() => {
+    usedQuestionIdsRef.current = usedQuestionIds;
+  }, [usedQuestionIds]);
 
   useEffect(() => {
     async function loadQuizData() {
@@ -104,7 +109,7 @@ function Quiz() {
             const result = await dispatch(fetchRandomQuestions({
               topicSlug: randomTopic.slug,
               limit: 10,
-              excludeIds: usedQuestionIds
+              excludeIds: usedQuestionIdsRef.current
             })).unwrap();
             
             if (!result.data || result.data.length === 0) {

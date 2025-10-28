@@ -1,4 +1,3 @@
-import React from 'react';
 import { Pencil, Trash2 } from 'lucide-react';
 
 const TopicList = ({ topics, searchTerm, onEdit, onDeleteRequest }) => {

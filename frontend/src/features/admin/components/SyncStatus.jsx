@@ -1,4 +1,3 @@
-import React from 'react';
 import { AlertCircle, CheckCircle2, Clock3, RefreshCw } from 'lucide-react';
 
 const SyncStatus = ({ statusData }) => {
