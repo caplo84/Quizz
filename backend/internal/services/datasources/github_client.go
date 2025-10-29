@@ -874,7 +874,9 @@ func (g *GitHubClient) extractFullTextFromNode(node ast.Node, source string) str
 			out.WriteString(string(v.Segment.Value([]byte(source))))
 		case *ast.CodeSpan:
 			// Include inline code spans as they're different from code blocks
-			out.WriteString("`" + string(v.Text([]byte(source))) + "`")
+			if lines := v.Lines(); lines != nil {
+				out.WriteString("`" + string(lines.Value([]byte(source))) + "`")
+			}
 		// Skip code blocks and images - they're handled separately now
 		case *ast.FencedCodeBlock, *ast.CodeBlock:
 			return ast.WalkSkipChildren, nil
