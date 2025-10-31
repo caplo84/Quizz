@@ -19,6 +19,7 @@ import QuizForm from "./features/admin/QuizForm";
 import TopicManagement from "./features/admin/TopicManagement";
 import SyncManagement from "./features/admin/SyncManagement";
 import BulkOperations from "./features/admin/BulkOperations";
+import AISettings from "./features/admin/AISettings";
 
 function App() {
   const router = createBrowserRouter([
@@ -65,6 +66,10 @@ function App() {
         {
           path: "analytics",
           element: <AdminDashboard />,
+        },
+        {
+          path: "settings",
+          element: <AISettings />,
         },
       ],
     },
