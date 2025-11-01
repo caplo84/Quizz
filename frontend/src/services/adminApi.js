@@ -323,6 +323,49 @@ const adminApi = {
     return response.json();
   },
 
+  reviewQuizBeforePublish: async (quizSlug) => {
+    if (!quizSlug) {
+      throw new Error('Quiz slug is required for pre-publish review.');
+    }
+
+    return adminApi.correctQuestions({
+      quiz_slug: quizSlug,
+      dry_run: true,
+      review_only: true,
+      batch_size: 100,
+      confidence_threshold: 0.85,
+    });
+  },
+
+  // ==================== AI Settings ====================
+
+  getAISettings: async () => {
+    const response = await fetch(`${config.BASE_URL}/api/admin/ai/settings`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch AI settings: ${response.status}`);
+    }
+
+    return response.json();
+  },
+
+  updateAISettings: async (payload) => {
+    const response = await fetch(`${config.BASE_URL}/api/admin/ai/settings`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload || {}),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to update AI settings: ${response.status}`);
+    }
+
+    return response.json();
+  },
+
   // ==================== Statistics ====================
 
   /**
