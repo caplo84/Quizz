@@ -16,6 +16,35 @@ import QuizList from './components/QuizList';
 const PAGE_SIZE = 10;
 const AUDIT_STORAGE_KEY = 'quiz_admin_audit_log';
 
+const getReviewAssessment = (report) => {
+  const processed = Number(report?.total_processed || 0);
+  const flagged = Number(report?.total_fixed || 0);
+  const failed = Number(report?.total_failed || 0);
+  const ratio = processed > 0 ? flagged / processed : 0;
+
+  if (failed > 0 || ratio >= 0.2) {
+    return {
+      level: 'danger',
+      comment: `Nguy hiểm: ${flagged} câu có vấn đề, ${failed} câu lỗi phân tích. Cần review thủ công trước publish.`,
+      canPublish: false,
+    };
+  }
+
+  if (flagged > 0) {
+    return {
+      level: 'warning',
+      comment: `Cảnh báo: phát hiện ${flagged} câu cần xem lại. Nên chỉnh tay trước publish.`,
+      canPublish: false,
+    };
+  }
+
+  return {
+    level: 'good',
+    comment: `Tốt: không thấy cảnh báo trên ${processed} câu đã quét.`,
+    canPublish: true,
+  };
+};
+
 const QuizManagement = () => {
   const [quizzes, setQuizzes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -27,6 +56,9 @@ const QuizManagement = () => {
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [publishLoadingId, setPublishLoadingId] = useState(null);
+  const [reviewLoadingId, setReviewLoadingId] = useState(null);
+  const [reviewGateByQuiz, setReviewGateByQuiz] = useState({});
+  const [reviewModalQuizId, setReviewModalQuizId] = useState(null);
   const [error, setError] = useState('');
   const [auditLog, setAuditLog] = useState(() => {
     try {
@@ -101,11 +133,97 @@ const QuizManagement = () => {
     }
   };
 
+  const handleReviewQuiz = async (quiz) => {
+    if (!quiz?.slug) {
+      setError('Quiz slug is missing, cannot run AI review.');
+      return;
+    }
+
+    try {
+      setError('');
+      setReviewLoadingId(quiz.id);
+
+      const reviewResponse = await adminApi.reviewQuizBeforePublish(quiz.slug);
+      const report = reviewResponse?.report || {};
+      const fixed = Number(report.total_fixed || 0);
+      const failed = Number(report.total_failed || 0);
+      const processed = Number(report.total_processed || 0);
+      const assessment = getReviewAssessment(report);
+
+      setReviewGateByQuiz((current) => ({
+        ...current,
+        [quiz.id]: {
+          quizId: quiz.id,
+          quizTitle: quiz.title || '',
+          quizSlug: quiz.slug || '',
+          isClean: assessment.canPublish,
+          level: assessment.level,
+          comment: assessment.comment,
+          canPublish: assessment.canPublish,
+          fixed,
+          failed,
+          processed,
+          skipped: Number(report.total_skipped || 0),
+          duration: report.duration || '',
+          bySource: report.by_source || {},
+          byConfidence: report.by_confidence || {},
+          estimatedApiCost: Number(report.estimated_api_cost || 0),
+          details: Array.isArray(report.details) ? report.details : [],
+          reviewedAt: new Date().toISOString(),
+        },
+      }));
+      setReviewModalQuizId(quiz.id);
+
+      setError(
+        `AI review-only: không ghi DB. ${assessment.comment}`,
+      );
+      appendAudit(
+        'AI_REVIEW_COMPLETED',
+        `Quiz #${quiz.id} => level=${assessment.level}, processed=${processed}, flagged=${fixed}, failed=${failed}`,
+      );
+    } catch (err) {
+      console.error('AI review failed:', err);
+      setError('AI review failed. Please retry.');
+      appendAudit('AI_REVIEW_FAILED', `Review failed for quiz #${quiz?.id}`);
+    } finally {
+      setReviewLoadingId(null);
+    }
+  };
+
+  const openReviewReport = (quiz) => {
+    const existing = reviewGateByQuiz?.[quiz?.id];
+    if (!existing) {
+      setError(`Chưa có report cho "${quiz?.title || quiz?.slug || 'quiz'}". Hãy chạy AI Review trước.`);
+      return;
+    }
+    setReviewModalQuizId(quiz.id);
+  };
+
   const handleTogglePublish = async (quiz) => {
     const previous = quizzes;
     const nextIsActive = !quiz.isActive;
 
     setPublishLoadingId(quiz.id);
+
+    if (nextIsActive) {
+      const gate = reviewGateByQuiz[quiz.id];
+      if (!gate) {
+        setError(`Please run AI Review for "${quiz.title || quiz.slug}" before publishing.`);
+        appendAudit('PUBLISH_BLOCKED_NO_REVIEW', `Blocked publish for quiz #${quiz.id} (no review)`);
+        setPublishLoadingId(null);
+        return;
+      }
+
+      if (!gate.canPublish) {
+        setError(
+          `AI Review chưa đạt mức tốt cho "${quiz.title || quiz.slug}" (${gate.level}). ${gate.comment}`,
+        );
+        appendAudit('PUBLISH_BLOCKED_REVIEW_ISSUES', `Blocked publish for quiz #${quiz.id} (review not clean)`);
+        setPublishLoadingId(null);
+        return;
+      }
+    }
+
     setQuizzes((current) =>
       current.map((item) =>
         item.id === quiz.id ? { ...item, isActive: nextIsActive } : item,
@@ -121,7 +239,7 @@ const QuizManagement = () => {
       );
     } catch (err) {
       setQuizzes(previous);
-      setError('Failed to update publication status. Changes were rolled back.');
+      setError(err?.message || 'Failed to update publication status. Changes were rolled back.');
       appendAudit('PUBLISH_FAILED', `Failed publication change for quiz #${quiz.id}`);
     } finally {
       setPublishLoadingId(null);
@@ -317,9 +435,141 @@ const QuizManagement = () => {
       <QuizList
         quizzes={paginatedQuizzes}
         onDeleteRequest={setDeleteConfirm}
+        onReviewQuiz={handleReviewQuiz}
+        onOpenReviewReport={openReviewReport}
         onTogglePublish={handleTogglePublish}
         publishLoadingId={publishLoadingId}
+        reviewLoadingId={reviewLoadingId}
+        reviewGateByQuiz={reviewGateByQuiz}
       />
+
+      {reviewModalQuizId && reviewGateByQuiz?.[reviewModalQuizId] ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6">
+          <div className="max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+            {(() => {
+              const report = reviewGateByQuiz[reviewModalQuizId];
+              const levelClassName =
+                report.level === 'good'
+                  ? 'bg-emerald-100 text-emerald-700'
+                  : report.level === 'warning'
+                    ? 'bg-amber-100 text-amber-700'
+                    : 'bg-red-100 text-red-700';
+
+              return (
+                <>
+                  <div className="flex items-start justify-between border-b border-gray-200 px-6 py-4">
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-gray-500">AI Review Report</p>
+                      <h3 className="mt-1 text-xl font-bold text-gray-900">
+                        {report.quizTitle || report.quizSlug || `Quiz #${report.quizId}`}
+                      </h3>
+                      <p className="mt-1 text-sm text-gray-500">
+                        Reviewed at {new Date(report.reviewedAt).toLocaleString()} • Duration {report.duration || '-'}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${levelClassName}`}>
+                        {report.level === 'good'
+                          ? 'Tốt'
+                          : report.level === 'warning'
+                            ? 'Cảnh báo'
+                            : 'Nguy hiểm'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setReviewModalQuizId(null)}
+                        className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
+                      >
+                        Close
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 overflow-y-auto px-6 py-4">
+                    <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-gray-700">
+                      {report.comment}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                      <div className="rounded-lg border border-gray-200 p-3">
+                        <p className="text-xs uppercase text-gray-500">Processed</p>
+                        <p className="mt-1 text-lg font-bold text-gray-900">{report.processed}</p>
+                      </div>
+                      <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+                        <p className="text-xs uppercase text-amber-700">Flagged</p>
+                        <p className="mt-1 text-lg font-bold text-amber-800">{report.fixed}</p>
+                      </div>
+                      <div className="rounded-lg border border-red-200 bg-red-50 p-3">
+                        <p className="text-xs uppercase text-red-700">Failed</p>
+                        <p className="mt-1 text-lg font-bold text-red-800">{report.failed}</p>
+                      </div>
+                      <div className="rounded-lg border border-gray-200 p-3">
+                        <p className="text-xs uppercase text-gray-500">Skipped</p>
+                        <p className="mt-1 text-lg font-bold text-gray-900">{report.skipped}</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                      <div className="rounded-lg border border-gray-200 p-3">
+                        <p className="text-sm font-semibold text-gray-800">By Source</p>
+                        <ul className="mt-2 space-y-1 text-sm text-gray-600">
+                          {Object.entries(report.bySource || {}).map(([k, v]) => (
+                            <li key={k} className="flex items-center justify-between">
+                              <span>{k}</span>
+                              <span className="font-medium text-gray-800">{v}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div className="rounded-lg border border-gray-200 p-3">
+                        <p className="text-sm font-semibold text-gray-800">By Confidence</p>
+                        <ul className="mt-2 space-y-1 text-sm text-gray-600">
+                          {Object.entries(report.byConfidence || {}).map(([k, v]) => (
+                            <li key={k} className="flex items-center justify-between">
+                              <span>{k}</span>
+                              <span className="font-medium text-gray-800">{v}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+
+                    <div className="rounded-lg border border-gray-200">
+                      <div className="border-b border-gray-200 px-3 py-2">
+                        <p className="text-sm font-semibold text-gray-800">Findings</p>
+                      </div>
+                      {report.details?.length ? (
+                        <div className="max-h-64 overflow-y-auto divide-y divide-gray-100">
+                          {report.details.slice(0, 100).map((item, index) => (
+                            <div key={`${item.question_id || 'q'}-${index}`} className="px-3 py-2 text-sm">
+                              <div className="flex items-center justify-between gap-2">
+                                <p className="font-medium text-gray-800">
+                                  Question #{item.question_id || '-'} • {item.action || 'reviewed'}
+                                </p>
+                                {item.confidence !== undefined ? (
+                                  <span className="text-xs text-gray-500">conf: {item.confidence}</span>
+                                ) : null}
+                              </div>
+                              {item.issues?.length ? (
+                                <p className="mt-1 text-xs text-amber-700">{item.issues.join(' • ')}</p>
+                              ) : null}
+                              {item.error ? (
+                                <p className="mt-1 text-xs text-red-600">{item.error}</p>
+                              ) : null}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="px-3 py-4 text-sm text-gray-500">Không có findings chi tiết cho lần quét này.</p>
+                      )}
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      ) : null}
 
       {quizzes.length > 500 && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-700 flex items-center gap-2">
