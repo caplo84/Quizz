@@ -21,6 +21,7 @@ const AdminHeader = () => {
     '/admin/topics': 'Topic Management',
     '/admin/sync': 'GitHub Sync',
     '/admin/bulk': 'Bulk Operations',
+    '/admin/settings': 'AI Settings',
     '/admin/analytics': 'Analytics',
   };
 
