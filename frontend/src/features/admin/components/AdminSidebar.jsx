@@ -6,6 +6,7 @@ import {
   RefreshCw as ArrowPathIcon,
   Layers as LayersIcon,
   BarChart3 as ChartBarIcon,
+  Settings as SettingsIcon,
   ArrowLeft
 } from 'lucide-react';
 
@@ -18,6 +19,7 @@ const AdminSidebar = () => {
     { path: '/admin/topics', icon: FolderIcon, label: 'Topics' },
     { path: '/admin/sync', icon: ArrowPathIcon, label: 'GitHub Sync' },
     { path: '/admin/bulk', icon: LayersIcon, label: 'Bulk Operations' },
+    { path: '/admin/settings', icon: SettingsIcon, label: 'AI Settings' },
     { path: '/admin/analytics', icon: ChartBarIcon, label: 'Analytics' },
   ];
 
