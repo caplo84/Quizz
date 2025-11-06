@@ -5,7 +5,9 @@ import (
 	"github.com/caplo84/quizz-backend/internal/services"
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -29,6 +31,17 @@ type QuestionCorrectionRequest struct {
 	BatchSize           *int    `json:"batch_size"`
 	ConfidenceThreshold float64 `json:"confidence_threshold"`
 	Verbose             bool    `json:"verbose"`
+	ReviewOnly          bool    `json:"review_only"`
+}
+
+type AISettingsUpdateRequest struct {
+	Provider            string `json:"provider"`
+	CloudflareAPIToken  string `json:"cloudflare_api_token"`
+	CloudflareAccountID string `json:"cloudflare_account_id"`
+	CloudflareModel     string `json:"cloudflare_ai_model"`
+	OllamaBaseURL       string `json:"ollama_base_url"`
+	OllamaModel         string `json:"ollama_model"`
+	CloudflareAIBaseURL string `json:"cloudflare_ai_base_url"`
 }
 
 // CreateQuiz handles POST /admin/quizzes
@@ -300,6 +313,7 @@ func (h *AdminHandler) CorrectQuestions(c *gin.Context) {
 		BatchSize:           batchSize,
 		ConfidenceThreshold: confidenceThreshold,
 		Verbose:             req.Verbose,
+		ReviewOnly:          req.ReviewOnly,
 	}
 
 	report, err := h.questionCorrector.CorrectAllQuizzes(c.Request.Context(), opts)
@@ -315,4 +329,84 @@ func (h *AdminHandler) CorrectQuestions(c *gin.Context) {
 		"message": "Question correction completed",
 		"report":  report,
 	})
+}
+
+// GetAISettings handles GET /api/admin/ai/settings
+func (h *AdminHandler) GetAISettings(c *gin.Context) {
+	provider := strings.ToLower(strings.TrimSpace(os.Getenv("AI_PROVIDER")))
+	if provider == "" {
+		provider = "ollama"
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"provider": provider,
+		"cloudflare": gin.H{
+			"account_id":       strings.TrimSpace(os.Getenv("CLOUDFLARE_ACCOUNT_ID")),
+			"model":            firstNonEmpty(strings.TrimSpace(os.Getenv("CLOUDFLARE_AI_MODEL")), "@cf/meta/llama-3.1-8b-instruct"),
+			"base_url":         strings.TrimSpace(os.Getenv("CLOUDFLARE_AI_BASE_URL")),
+			"token_configured": strings.TrimSpace(os.Getenv("CLOUDFLARE_API_TOKEN")) != "" || strings.TrimSpace(os.Getenv("CF_API_TOKEN")) != "",
+		},
+		"ollama": gin.H{
+			"base_url": firstNonEmpty(strings.TrimSpace(os.Getenv("OLLAMA_BASE_URL")), "http://localhost:11434"),
+			"model":    firstNonEmpty(strings.TrimSpace(os.Getenv("OLLAMA_MODEL")), "qwen2.5:7b"),
+		},
+	})
+}
+
+// UpdateAISettings handles PUT /api/admin/ai/settings
+func (h *AdminHandler) UpdateAISettings(c *gin.Context) {
+	var req AISettingsUpdateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid request body",
+		})
+		return
+	}
+
+	provider := strings.ToLower(strings.TrimSpace(req.Provider))
+	if provider != "" {
+		switch provider {
+		case "ollama", "cloudflare":
+			_ = os.Setenv("AI_PROVIDER", provider)
+		default:
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "Unsupported provider. Allowed values: ollama, cloudflare",
+			})
+			return
+		}
+	}
+
+	if v := strings.TrimSpace(req.CloudflareAPIToken); v != "" {
+		_ = os.Setenv("CLOUDFLARE_API_TOKEN", v)
+		_ = os.Setenv("CF_API_TOKEN", v)
+	}
+	if v := strings.TrimSpace(req.CloudflareAccountID); v != "" {
+		_ = os.Setenv("CLOUDFLARE_ACCOUNT_ID", v)
+		_ = os.Setenv("CF_ACCOUNT_ID", v)
+	}
+	if v := strings.TrimSpace(req.CloudflareModel); v != "" {
+		_ = os.Setenv("CLOUDFLARE_AI_MODEL", v)
+	}
+	if v := strings.TrimSpace(req.CloudflareAIBaseURL); v != "" {
+		_ = os.Setenv("CLOUDFLARE_AI_BASE_URL", v)
+	}
+	if v := strings.TrimSpace(req.OllamaBaseURL); v != "" {
+		_ = os.Setenv("OLLAMA_BASE_URL", v)
+	}
+	if v := strings.TrimSpace(req.OllamaModel); v != "" {
+		_ = os.Setenv("OLLAMA_MODEL", v)
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "AI settings updated",
+	})
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return value
+		}
+	}
+	return ""
 }
