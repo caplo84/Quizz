@@ -104,7 +104,7 @@ func (r *quizRepository) GetQuizByID(ctx context.Context, id uint) (*models.Quiz
 		Preload("Topic").
 		Preload("Questions").
 		Preload("Questions.Choices").
-		Where("id = ? AND is_active = ?", id, true).
+		Where("id = ?", id).
 		First(&quiz).Error
 
 	if err != nil {
