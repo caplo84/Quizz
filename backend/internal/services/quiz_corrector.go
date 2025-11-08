@@ -20,6 +20,7 @@ type CorrectionOptions struct {
 	BatchSize           int
 	ConfidenceThreshold float64
 	Verbose             bool
+	ReviewOnly          bool
 }
 
 type ValidationResult struct {
@@ -36,6 +37,8 @@ type QuestionCorrectionDetail struct {
 	Action      string   `json:"action"`
 	Source      string   `json:"source,omitempty"`
 	Confidence  float64  `json:"confidence,omitempty"`
+	Severity    string   `json:"severity,omitempty"`
+	Summary     string   `json:"summary,omitempty"`
 	Issues      []string `json:"issues,omitempty"`
 	Error       string   `json:"error,omitempty"`
 	CorrectedAt string   `json:"corrected_at,omitempty"`
@@ -86,6 +89,8 @@ func NewQuizCorrectorService(db *gorm.DB, github *datasources.GitHubClient, ai *
 
 func (s *QuizCorrectorService) CorrectAllQuizzes(ctx context.Context, opts CorrectionOptions) (*CorrectionReport, error) {
 	started := time.Now()
+	s.ai = NewAIAnswerServiceFromEnv()
+
 	if opts.BatchSize <= 0 {
 		opts.BatchSize = 100
 	}
@@ -99,12 +104,25 @@ func (s *QuizCorrectorService) CorrectAllQuizzes(ctx context.Context, opts Corre
 		BySource:     map[string]int{"parsed": 0, "ai-extracted": 0, "ai-generated": 0},
 		ByConfidence: map[string]int{"high_0.9_1.0": 0, "medium_0.7_0.9": 0, "low_0.0_0.7": 0},
 	}
+	if opts.ReviewOnly {
+		report.DryRun = true
+	}
 
 	questions, err := s.loadQuestions(ctx, opts.QuizSlug)
 	if err != nil {
 		return nil, err
 	}
 	report.TotalProcessed = len(questions)
+
+	if opts.ReviewOnly {
+		if s.ai == nil || !s.ai.IsConfigured() {
+			return nil, fmt.Errorf("ai semantic review is not configured; set AI_PROVIDER and API credentials")
+		}
+		s.reviewQuestionsContent(ctx, questions, report)
+		report.Duration = time.Since(started).String()
+		report.EstimatedAPICost = estimateCost(report.BySource)
+		return report, nil
+	}
 
 	for i := 0; i < len(questions); i += opts.BatchSize {
 		end := i + opts.BatchSize
@@ -188,6 +206,88 @@ func (s *QuizCorrectorService) CorrectAllQuizzes(ctx context.Context, opts Corre
 	report.Duration = time.Since(started).String()
 	report.EstimatedAPICost = estimateCost(report.BySource)
 	return report, nil
+}
+
+func (s *QuizCorrectorService) reviewQuestionsContent(ctx context.Context, questions []models.Question, report *CorrectionReport) {
+	for i := range questions {
+		q := &questions[i]
+		validation := s.ValidateQuestion(q)
+
+		nonEmptyChoices := extractNonEmptyChoiceTexts(q.Choices)
+		correctAnswer := ""
+		for _, choice := range q.Choices {
+			if choice.IsCorrect {
+				correctAnswer = strings.TrimSpace(choice.ChoiceText)
+				break
+			}
+		}
+
+		severity := "good"
+		summary := "No major issues detected"
+		issues := append([]string{}, validation.Issues...)
+		confidence := 0.8
+
+		if !validation.IsValid {
+			severity = "danger"
+			summary = "Structural validation failed"
+		}
+
+		if s.ai != nil && s.ai.IsConfigured() {
+			review, err := s.ai.ReviewQuestionQuality(
+				ctx,
+				strings.TrimSpace(q.QuestionText),
+				q.Quiz.Topic.Name,
+				q.Quiz.DifficultyLevel,
+				nonEmptyChoices,
+				correctAnswer,
+			)
+			if err != nil {
+				report.TotalFailed++
+				report.Details = append(report.Details, QuestionCorrectionDetail{
+					QuestionID: q.ID,
+					QuizSlug:   q.Quiz.Slug,
+					Action:     "reviewed",
+					Source:     "ai-review",
+					Severity:   "danger",
+					Summary:    "AI review call failed",
+					Issues:     issues,
+					Error:      err.Error(),
+				})
+				continue
+			}
+
+			confidence = review.Confidence
+			if strings.TrimSpace(review.Comment) != "" {
+				summary = strings.TrimSpace(review.Comment)
+			}
+			if len(review.Issues) > 0 {
+				issues = append(issues, review.Issues...)
+			}
+
+			if severity != "danger" {
+				severity = review.Severity
+			}
+			report.BySource["ai-extracted"]++
+			s.addConfidenceBucket(report, confidence)
+		}
+
+		if severity == "good" {
+			report.TotalSkipped++
+		} else {
+			report.TotalFixed++
+		}
+
+		report.Details = append(report.Details, QuestionCorrectionDetail{
+			QuestionID: q.ID,
+			QuizSlug:   q.Quiz.Slug,
+			Action:     "reviewed",
+			Source:     "ai-review",
+			Confidence: confidence,
+			Severity:   severity,
+			Summary:    summary,
+			Issues:     dedupeAndTrim(issues),
+		})
+	}
 }
 
 func (s *QuizCorrectorService) ValidateQuestion(q *models.Question) ValidationResult {
