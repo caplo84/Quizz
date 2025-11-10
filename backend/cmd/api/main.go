@@ -294,6 +294,8 @@ func (app *Application) setupRouter() *gin.Engine {
 		adminRoutes.GET("/sync/github/status", adminHandler.GetGitHubSyncStatus)
 		adminRoutes.POST("/download-all-topic-images", adminHandler.DownloadAllTopicImages)
 		adminRoutes.POST("/questions/correct", adminHandler.CorrectQuestions)
+		adminRoutes.GET("/ai/settings", adminHandler.GetAISettings)
+		adminRoutes.PUT("/ai/settings", adminHandler.UpdateAISettings)
 	}
 
 	router.GET("/health", healthHandler.HealthCheck)
