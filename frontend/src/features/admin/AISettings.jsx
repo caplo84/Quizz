@@ -27,7 +27,7 @@ const AISettings = () => {
   const providerHint = useMemo(() => {
     if (isCloudflare) return 'Cloudflare Workers AI will be used for question correction and review.';
     return 'Local Ollama will be used for question correction and review.';
-	}, [isCloudflare, isOllama]);
+  }, [isCloudflare]);
 
   const loadSettings = async () => {
     setLoading(true);
