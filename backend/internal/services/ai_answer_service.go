@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"regexp"
@@ -117,9 +118,8 @@ func normalizeCloudflareBaseURL(raw, accountID string) string {
 	baseURL = strings.TrimRight(baseURL, "/")
 	if idx := strings.Index(baseURL, "/run/"); idx >= 0 {
 		baseURL = baseURL[:idx]
-	} else if strings.HasSuffix(baseURL, "/run") {
-		baseURL = strings.TrimSuffix(baseURL, "/run")
 	}
+	baseURL = strings.TrimSuffix(baseURL, "/run")
 
 	if regexp.MustCompile(`/accounts/[^/]+$`).MatchString(baseURL) {
 		baseURL += "/ai"
@@ -476,7 +476,7 @@ func (s *AIAnswerService) runJSONPromptCloudflare(ctx context.Context, prompt st
 		if len(resp.Errors) > 0 && strings.TrimSpace(resp.Errors[0].Message) != "" {
 			errMsg = strings.TrimSpace(resp.Errors[0].Message)
 		}
-		return fmt.Errorf(errMsg)
+		return errors.New(errMsg)
 	}
 
 	text := strings.TrimSpace(extractCloudflareResultText(resp.Result))
