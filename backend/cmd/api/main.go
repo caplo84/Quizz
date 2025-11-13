@@ -70,16 +70,22 @@ func main() {
 
 	// Initialize database with logging
 	if err := app.initDatabase(); err != nil {
-		appLogger.Log.WithError(err).Fatal("Failed to initialize database")
+		appLogger.Log.WithError(err).Error("Database initialization failed - continuing startup without database")
 	}
 
 	// Initialize Redis
 	if err := app.initRedis(); err != nil {
-		log.Fatalf("Failed to initialize Redis: %v", err)
+		appLogger.Log.WithError(err).Error("Redis initialization failed - continuing startup without Redis")
 	}
 
-	// Initialize cache
-	app.Cache = cache.NewRedisCache(app.Redis)
+	// Initialize cache with Redis when available, otherwise use in-memory fallback.
+	if app.Redis != nil {
+		app.Cache = cache.NewRedisCache(app.Redis)
+		appLogger.Log.Info("Using Redis cache")
+	} else {
+		app.Cache = cache.NewMemoryCache()
+		appLogger.Log.Warn("Using in-memory cache fallback")
+	}
 
 	// Setup routes
 	app.Router = app.setupRouter()
@@ -211,11 +217,14 @@ func (app *Application) setupRouter() *gin.Engine {
 	// Initialize handlers
 	healthHandler := handlers.NewHealthHandler(app.DB, app.Redis)
 
-	// Health check endpoints - REMOVE the conflicting route
+	// Simple root endpoint for platform health checks.
+	router.GET("/", func(c *gin.Context) {
+		c.String(http.StatusOK, "OK")
+	})
+
+	// Health check endpoints
 	health := router.Group("/health")
 	{
-		// COMMENT OUT OR REMOVE this line to avoid conflict:
-		// health.GET("/", healthHandler.HealthCheck)
 		health.GET("/live", healthHandler.LivenessProbe)
 		health.GET("/ready", healthHandler.ReadinessProbe)
 	}
@@ -304,16 +313,19 @@ func (app *Application) setupRouter() *gin.Engine {
 }
 
 func (app *Application) startServer() {
+	port := app.resolveServerPort()
+
 	server := &http.Server{
-		Addr:    ":" + app.Config.Server.Port,
+		Addr:    ":" + port,
 		Handler: app.Router,
 	}
 
 	// Start server in a goroutine
 	go func() {
 		appLogger.Log.WithFields(appLogger.Fields{
-			"port": app.Config.Server.Port,
-			"env":  app.Config.Server.Environment,
+			"port":        port,
+			"env":         app.Config.Server.Environment,
+			"port_env_set": os.Getenv("PORT") != "",
 		}).Info("Server starting")
 
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -337,8 +349,10 @@ func (app *Application) startServer() {
 	}
 
 	// Close database connection
-	if sqlDB, err := app.DB.DB(); err == nil {
-		sqlDB.Close()
+	if app.DB != nil {
+		if sqlDB, err := app.DB.DB(); err == nil {
+			sqlDB.Close()
+		}
 	}
 
 	// Close Redis connection
@@ -347,4 +361,16 @@ func (app *Application) startServer() {
 	}
 
 	appLogger.Log.Info("Server exited")
+}
+
+func (app *Application) resolveServerPort() string {
+	if envPort := os.Getenv("PORT"); envPort != "" {
+		return envPort
+	}
+
+	if app.Config != nil && app.Config.Server.Port != "" {
+		return app.Config.Server.Port
+	}
+
+	return "8080"
 }

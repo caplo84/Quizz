@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"runtime"
 	"time"
@@ -105,6 +106,10 @@ func (h *HealthHandler) ReadinessProbe(c *gin.Context) {
 }
 
 func (h *HealthHandler) checkDatabase() error {
+	if h.db == nil {
+		return fmt.Errorf("database not initialized")
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -117,6 +122,10 @@ func (h *HealthHandler) checkDatabase() error {
 }
 
 func (h *HealthHandler) checkRedis() error {
+	if h.redis == nil {
+		return fmt.Errorf("redis not initialized")
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
@@ -127,11 +136,15 @@ func (h *HealthHandler) getSystemMetrics() HealthMetrics {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
 
-	sqlDB, _ := h.db.DB()
-	dbStats := sqlDB.Stats()
+	openConnections := 0
+	if h.db != nil {
+		if sqlDB, err := h.db.DB(); err == nil {
+			openConnections = sqlDB.Stats().OpenConnections
+		}
+	}
 
 	return HealthMetrics{
-		DatabaseConnections: dbStats.OpenConnections,
+		DatabaseConnections: openConnections,
 		MemoryUsageMB:       float64(m.Alloc) / 1024 / 1024,
 		Goroutines:          runtime.NumGoroutine(),
 		CPUCores:            runtime.NumCPU(),
