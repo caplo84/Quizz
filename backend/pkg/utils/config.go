@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -96,9 +97,12 @@ func LoadConfig() (*Config, error) {
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
-	// Read config file
+	// Read config file when available; allow env/default-only mode in cloud deploys.
 	if err := viper.ReadInConfig(); err != nil {
-		return nil, fmt.Errorf("failed to read config file: %w", err)
+		var configFileNotFound viper.ConfigFileNotFoundError
+		if !errors.As(err, &configFileNotFound) {
+			return nil, fmt.Errorf("failed to read config file: %w", err)
+		}
 	}
 
 	// Expand environment variables in config values
@@ -108,6 +112,8 @@ func LoadConfig() (*Config, error) {
 	if err := viper.Unmarshal(&config); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
 	}
+
+	applyDefaults(&config)
 
 	// Validate configuration
 	if err := validateConfig(&config); err != nil {
@@ -143,6 +149,51 @@ func validateConfig(config *Config) error {
 	}
 
 	return nil
+}
+
+func applyDefaults(config *Config) {
+	if config.Server.Port == "" {
+		config.Server.Port = "8080"
+	}
+	if config.Server.Environment == "" {
+		config.Server.Environment = "development"
+	}
+	if config.Server.GinMode == "" {
+		config.Server.GinMode = "debug"
+	}
+
+	if config.Database.Port == "" {
+		config.Database.Port = "5432"
+	}
+	if config.Database.Host == "" {
+		config.Database.Host = "localhost"
+	}
+	if config.Database.User == "" {
+		config.Database.User = "quiz_user"
+	}
+	if config.Database.DBName == "" {
+		config.Database.DBName = "quiz_db"
+	}
+	if config.Database.SSLMode == "" {
+		config.Database.SSLMode = "disable"
+	}
+
+	if config.Redis.Host == "" {
+		config.Redis.Host = "localhost"
+	}
+	if config.Redis.Port == "" {
+		config.Redis.Port = "6379"
+	}
+
+	if config.Logging.Level == "" {
+		config.Logging.Level = "info"
+	}
+	if config.Logging.Format == "" {
+		config.Logging.Format = "json"
+	}
+	if config.Logging.Output == "" {
+		config.Logging.Output = "stdout"
+	}
 }
 
 // Helper functions
