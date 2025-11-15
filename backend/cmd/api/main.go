@@ -41,13 +41,14 @@ type Application struct {
 func main() {
 	// Load environment variables
 	if err := godotenv.Load(); err != nil {
-		log.Println("No .env file found, using system environment variables")
+		fmt.Println("No .env file found, using system environment variables")
 	}
 
 	// Load configuration using utility
 	config, err := utils.LoadConfig()
 	if err != nil {
-		log.Fatalf("Failed to load configuration: %v", err)
+		fmt.Printf("Configuration load failed, using fallback config: %v\n", err)
+		config = buildFallbackConfig()
 	}
 
 	// Initialize structured logging based on config
@@ -373,4 +374,60 @@ func (app *Application) resolveServerPort() string {
 	}
 
 	return "8080"
+}
+
+func buildFallbackConfig() *utils.Config {
+	serverEnv := os.Getenv("APP_ENV")
+	if serverEnv == "" {
+		serverEnv = "development"
+	}
+
+	ginMode := os.Getenv("GIN_MODE")
+	if ginMode == "" {
+		if serverEnv == "production" {
+			ginMode = gin.ReleaseMode
+		} else {
+			ginMode = gin.DebugMode
+		}
+	}
+
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	return &utils.Config{
+		Server: utils.ServerConfig{
+			Port:        port,
+			Environment: serverEnv,
+			GinMode:     ginMode,
+		},
+		Database: utils.DatabaseConfig{
+			Host:     getEnvOrDefault("DB_HOST", "localhost"),
+			Port:     getEnvOrDefault("DB_PORT", "5432"),
+			User:     getEnvOrDefault("DB_USER", "quiz_user"),
+			Password: os.Getenv("DB_PASSWORD"),
+			DBName:   getEnvOrDefault("DB_NAME", "quiz_db"),
+			SSLMode:  getEnvOrDefault("DB_SSLMODE", "disable"),
+		},
+		Redis: utils.RedisConfig{
+			Host:     getEnvOrDefault("REDIS_HOST", "localhost"),
+			Port:     getEnvOrDefault("REDIS_PORT", "6379"),
+			Password: os.Getenv("REDIS_PASSWORD"),
+			DB:       0,
+		},
+		Logging: utils.LoggingConfig{
+			Level:  getEnvOrDefault("LOG_LEVEL", "info"),
+			Format: getEnvOrDefault("LOG_FORMAT", "json"),
+			Output: "stdout",
+		},
+	}
+}
+
+func getEnvOrDefault(key, fallback string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+
+	return fallback
 }
