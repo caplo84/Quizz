@@ -1,28 +1,113 @@
-# 🎯 Quizz
+# Quizz
 
-## ✨ Key Features
+A full-stack technical quiz platform focused on practical engineering topics.
 
-- 🧠 **70+ Topics** - CSS, JavaScript, Python, Java, Go, React, and more
-- 🎲 **Smart Random Mode** - Never repeat questions in the same session
-- 💻 **Code Block Rendering** - Syntax-highlighted code with copy functionality
-- 🖼️ **Rich Media Support** - Images with zoom and responsive display
-- 🌙 **Dark/Light Mode** - Seamless theme switching
-- 📱 **Mobile Responsive** - Perfect experience on all devices
-- 🚀 **Real-time Sync** - Auto-sync from GitHub skill assessments
+Quizz combines a modern quiz experience with a content operations pipeline:
+- Learners can discover topics, run normal or random quiz sessions, and submit attempts.
+- Admins can manage topics/quizzes, sync content from GitHub, and run correction workflows.
 
-## 🚀 Quick Start
+If you want a quick mental model: this is a React frontend + Go API + PostgreSQL/Redis backend, with optional AI-assisted correction tooling.
+
+## Why This Project Exists
+
+Most quiz apps are either simple but hard to scale, or rich but hard to maintain.
+Quizz is built to keep the core experience fast while making content operations easier for a small team:
+- Topic-first navigation
+- Randomized question batches
+- Source sync from public technical quiz repositories
+- Admin tooling for content quality and maintenance
+
+## Core Capabilities
+
+- 70+ technical topics (programming and broader tech domains)
+- Random quiz mode with exclusion support
+- Code and image support in questions and choices
+- Attempt tracking and scoring
+- Admin CRUD for topics/quizzes
+- GitHub-based content sync
+- AI-assisted correction pipeline
+- Health checks and Prometheus metrics
+
+## Tech Stack
+
+- Frontend: React, Vite, Redux Toolkit, Tailwind CSS
+- Backend: Go, Gin, GORM
+- Data: PostgreSQL, Redis
+- Integrations: GitHub API, optional Ollama/Cloudflare AI providers
+
+## Quick Start (Docker)
 
 ```bash
-# Clone and run with Docker
 git clone https://github.com/caplo84/Quizz.git
 cd Quizz
-docker-compose -f deployment/docker-compose.development.yml up
+docker-compose -f deployment/docker-compose.development.yml up --build
 ```
 
-**That's it!** Access at `http://localhost:5173` 🎉
+After startup:
+- Frontend: http://localhost:5173
+- Backend API: http://localhost:8080
+- Health: http://localhost:8080/health
+- Adminer: http://localhost:8081
+- Redis Commander: http://localhost:8082
 
-## 🛠️ Tech Stack
+## Local Development (Without Full Compose)
 
-**Frontend:** React + Vite + Tailwind CSS + Redux Toolkit  
-**Backend:** Go + Gin + PostgreSQL + Redis  
-**Content:** Auto-synced from [LinkedIn Skill Assessments](https://github.com/Ebazhanov/linkedin-skill-assessments-quizzes)
+You can also run services separately:
+- Start PostgreSQL + Redis
+- Run backend from `backend/`
+- Run frontend from `frontend/`
+
+See deployment scripts and compose files in `deployment/`.
+
+## Project Structure
+
+```text
+Quizz/
+├── frontend/      # React application
+├── backend/       # Go API, services, repositories, migrations
+├── deployment/    # Docker compose and environment deployment assets
+├── docs/          # Product + engineering + operations documentation
+├── features/      # Feature planning and documentation artifacts
+└── scripts/       # Utility scripts
+```
+
+## Documentation
+
+The main documentation hub lives at:
+- `docs/README.md`
+
+Recommended reading order:
+1. `docs/STARTUP_PRODUCT_BRIEF.md`
+2. `docs/ARCHITECTURE_OVERVIEW.md`
+3. `docs/DEPENDENCY_MAP_AND_TECH_RISKS.md`
+4. `docs/API_REFERENCE.md`
+5. `docs/OPERATIONS_RUNBOOK.md`
+
+## API Surface (High-Level)
+
+- Public API: `/api/v1/...`
+	- Topics
+	- Quizzes
+	- Questions
+	- Attempts
+- Admin API:
+	- `/api/v1/admin/...` for CRUD
+	- `/api/admin/...` for sync, correction, and AI settings
+
+## Current Priorities
+
+- Harden admin route security and authorization
+- Standardize frontend API access through one client abstraction
+- Improve test coverage for mutation and admin workflows
+- Optimize topic/quiz listing to avoid N+1 request patterns
+
+## Contributing
+
+If you are contributing:
+- Keep handler logic thin and business logic in services
+- Add tests for behavior changes
+- Document user-visible or operational changes in `docs/`
+
+## License
+
+See repository license files and upstream content licenses where applicable.
