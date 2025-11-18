@@ -25,7 +25,7 @@ const getReviewAssessment = (report) => {
   if (failed > 0 || ratio >= 0.2) {
     return {
       level: 'danger',
-      comment: `Nguy hiểm: ${flagged} câu có vấn đề, ${failed} câu lỗi phân tích. Cần review thủ công trước publish.`,
+      comment: `Critical: ${flagged} questions need attention, ${failed} questions failed analysis. Manual review is required before publishing.`,
       canPublish: false,
     };
   }
@@ -33,14 +33,14 @@ const getReviewAssessment = (report) => {
   if (flagged > 0) {
     return {
       level: 'warning',
-      comment: `Cảnh báo: phát hiện ${flagged} câu cần xem lại. Nên chỉnh tay trước publish.`,
+      comment: `Warning: detected ${flagged} questions that should be reviewed. Manual edits are recommended before publishing.`,
       canPublish: false,
     };
   }
 
   return {
     level: 'good',
-    comment: `Tốt: không thấy cảnh báo trên ${processed} câu đã quét.`,
+    comment: `Good: no warnings detected across ${processed} scanned questions.`,
     canPublish: true,
   };
 };
@@ -175,7 +175,7 @@ const QuizManagement = () => {
       setReviewModalQuizId(quiz.id);
 
       setError(
-        `AI review-only: không ghi DB. ${assessment.comment}`,
+        `AI review-only: no database writes performed. ${assessment.comment}`,
       );
       appendAudit(
         'AI_REVIEW_COMPLETED',
@@ -193,7 +193,7 @@ const QuizManagement = () => {
   const openReviewReport = (quiz) => {
     const existing = reviewGateByQuiz?.[quiz?.id];
     if (!existing) {
-      setError(`Chưa có report cho "${quiz?.title || quiz?.slug || 'quiz'}". Hãy chạy AI Review trước.`);
+      setError(`No report found for "${quiz?.title || quiz?.slug || 'quiz'}". Please run AI Review first.`);
       return;
     }
     setReviewModalQuizId(quiz.id);
@@ -216,7 +216,7 @@ const QuizManagement = () => {
 
       if (!gate.canPublish) {
         setError(
-          `AI Review chưa đạt mức tốt cho "${quiz.title || quiz.slug}" (${gate.level}). ${gate.comment}`,
+          `AI Review has not reached the required quality level for "${quiz.title || quiz.slug}" (${gate.level}). ${gate.comment}`,
         );
         appendAudit('PUBLISH_BLOCKED_REVIEW_ISSUES', `Blocked publish for quiz #${quiz.id} (review not clean)`);
         setPublishLoadingId(null);
@@ -470,10 +470,10 @@ const QuizManagement = () => {
                     <div className="flex items-center gap-3">
                       <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${levelClassName}`}>
                         {report.level === 'good'
-                          ? 'Tốt'
+                          ? 'Good'
                           : report.level === 'warning'
-                            ? 'Cảnh báo'
-                            : 'Nguy hiểm'}
+                            ? 'Warning'
+                            : 'Critical'}
                       </span>
                       <button
                         type="button"
@@ -560,7 +560,7 @@ const QuizManagement = () => {
                           ))}
                         </div>
                       ) : (
-                        <p className="px-3 py-4 text-sm text-gray-500">Không có findings chi tiết cho lần quét này.</p>
+                        <p className="px-3 py-4 text-sm text-gray-500">No detailed findings for this scan.</p>
                       )}
                     </div>
                   </div>
