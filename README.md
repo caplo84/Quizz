@@ -103,11 +103,14 @@ Recommended reading order:
 
 ## Contributing
 
-If you are contributing:
-- Keep handler logic thin and business logic in services
-- Add tests for behavior changes
-- Document user-visible or operational changes in `docs/`
+This is currently a personal learning project.
+
+External pull requests are not being accepted at this time.
+
+If you still want to discuss ideas or report issues, you can open an issue for feedback and learning discussion.
 
 ## License
 
-See repository license files and upstream content licenses where applicable.
+This project is licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+
+See [LICENSE](LICENSE) for the full license text.
