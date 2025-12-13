@@ -212,6 +212,8 @@ func (app *Application) setupRouter() *gin.Engine {
 	router.Use(metrics.PrometheusMiddleware())
 
 	// Add other middleware
+	router.Use(middleware.SecurityHeaders())
+	router.Use(middleware.SecurityLoggingMiddleware())
 	router.Use(middleware.RequestLoggingMiddleware())
 	router.Use(gin.Recovery())
 
@@ -265,6 +267,11 @@ func (app *Application) setupRouter() *gin.Engine {
 
 	adminHandler := handlers.NewAdminHandler(adminService, githubSyncService, questionCorrector)
 
+	var adminRateLimit gin.HandlerFunc
+	if app.Redis != nil {
+		adminRateLimit = middleware.NewRateLimiter(app.Redis, 1, 60).RateLimit()
+	}
+
 	// Serve static files for quiz images
 	router.Static("/static", "./static")
 
@@ -286,6 +293,10 @@ func (app *Application) setupRouter() *gin.Engine {
 
 		// Admin routes
 		admin := v1.Group("/admin")
+		admin.Use(middleware.AdminAuth())
+		if adminRateLimit != nil {
+			admin.Use(adminRateLimit)
+		}
 		{
 			admin.GET("/quizzes/:id", adminHandler.GetQuizByID)
 			admin.POST("/quizzes", adminHandler.CreateQuiz)
@@ -299,6 +310,10 @@ func (app *Application) setupRouter() *gin.Engine {
 	}
 
 	adminRoutes := router.Group("/api/admin")
+	adminRoutes.Use(middleware.AdminAuth())
+	if adminRateLimit != nil {
+		adminRoutes.Use(adminRateLimit)
+	}
 	{
 		adminRoutes.POST("/sync/github", adminHandler.SyncGitHubData)
 		adminRoutes.GET("/sync/github/status", adminHandler.GetGitHubSyncStatus)
@@ -324,8 +339,8 @@ func (app *Application) startServer() {
 	// Start server in a goroutine
 	go func() {
 		appLogger.Log.WithFields(appLogger.Fields{
-			"port":        port,
-			"env":         app.Config.Server.Environment,
+			"port":         port,
+			"env":          app.Config.Server.Environment,
 			"port_env_set": os.Getenv("PORT") != "",
 		}).Info("Server starting")
 
