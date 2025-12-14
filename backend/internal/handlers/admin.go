@@ -376,9 +376,11 @@ func (h *AdminHandler) UpdateAISettings(c *gin.Context) {
 		}
 	}
 
-	if v := strings.TrimSpace(req.CloudflareAPIToken); v != "" {
-		_ = os.Setenv("CLOUDFLARE_API_TOKEN", v)
-		_ = os.Setenv("CF_API_TOKEN", v)
+	if strings.TrimSpace(req.CloudflareAPIToken) != "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Updating cloudflare_api_token via API is not allowed. Use a secret manager or deployment environment.",
+		})
+		return
 	}
 	if v := strings.TrimSpace(req.CloudflareAccountID); v != "" {
 		_ = os.Setenv("CLOUDFLARE_ACCOUNT_ID", v)
