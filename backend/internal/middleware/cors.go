@@ -10,11 +10,21 @@ import (
 func CORS() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		allowedOrigins := os.Getenv("CORS_ALLOWED_ORIGINS")
+		environment := strings.ToLower(strings.TrimSpace(os.Getenv("APP_ENV")))
+		if environment == "" {
+			environment = strings.ToLower(strings.TrimSpace(os.Getenv("GIN_MODE")))
+		}
+
 		if allowedOrigins == "" {
-			allowedOrigins = "*" // Default to allowing all in development
+			if environment == "production" || environment == "release" {
+				allowedOrigins = ""
+			} else {
+				allowedOrigins = "*" // Development convenience fallback.
+			}
 		}
 
 		origin := c.Request.Header.Get("Origin")
+		allowCredentials := false
 		if allowedOrigins == "*" {
 			c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 		} else {
@@ -22,12 +32,15 @@ func CORS() gin.HandlerFunc {
 			for _, o := range origins {
 				if strings.TrimSpace(o) == origin {
 					c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+					allowCredentials = true
 					break
 				}
 			}
 		}
 
-		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+		if allowCredentials {
+			c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+		}
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE, PATCH")
 
