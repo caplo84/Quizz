@@ -3,6 +3,7 @@ package middleware
 import (
 	"bytes"
 	"io"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -134,5 +135,5 @@ func isSuspiciousRequest(c *gin.Context) bool {
 
 // Helper function to check if string contains substring (case insensitive)
 func contains(s, substr string) bool {
-	return len(s) >= len(substr) && s[:len(substr)] == substr
+	return strings.Contains(strings.ToLower(s), strings.ToLower(substr))
 }
