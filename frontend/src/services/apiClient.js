@@ -15,11 +15,13 @@ class ApiClient {
         ...options,
       };
 
-    const candidates = [this.baseURL, this.fallbackBaseURL];
+    const isAbsoluteApiPath = endpoint.startsWith('/api/');
+    const candidates = isAbsoluteApiPath
+      ? [`${config.BASE_URL}${endpoint}`, endpoint]
+      : [`${this.baseURL}${endpoint}`, `${this.fallbackBaseURL}${endpoint}`];
     let lastError = null;
 
-    for (const base of candidates) {
-      const url = `${base}${endpoint}`;
+    for (const url of candidates) {
 
       try {
         const response = await fetch(url, requestOptions);
@@ -28,7 +30,7 @@ class ApiClient {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        const data = await response.json();
+        const data = await response.json().catch(() => ({}));
         return data;
       } catch (error) {
         lastError = error;
