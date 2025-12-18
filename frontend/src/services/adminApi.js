@@ -1,5 +1,4 @@
 import apiClient from './apiClient';
-import config from '../config/api';
 
 /**
  * Admin API Service
@@ -257,16 +256,7 @@ const adminApi = {
    */
   triggerGitHubSync: async () => {
     try {
-      const response = await fetch(`${config.BASE_URL}/api/admin/sync/github`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to trigger sync: ${response.status}`);
-      }
-
-      return await response.json();
+      return await apiClient.post('/api/admin/sync/github', {});
     } catch (error) {
       console.error('Failed to trigger GitHub sync:', error);
       throw error;
@@ -278,16 +268,7 @@ const adminApi = {
    */
   getSyncStatus: async () => {
     try {
-      const response = await fetch(`${config.BASE_URL}/api/admin/sync/github/status`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch sync status: ${response.status}`);
-      }
-
-      return await response.json();
+      return await apiClient.get('/api/admin/sync/github/status');
     } catch (error) {
       console.error('Failed to fetch sync status:', error);
       throw error;
@@ -297,30 +278,11 @@ const adminApi = {
   triggerSync: async () => adminApi.triggerGitHubSync(),
 
   downloadAllTopicImages: async () => {
-    const response = await fetch(`${config.BASE_URL}/api/admin/download-all-topic-images`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to download topic images: ${response.status}`);
-    }
-
-    return response.json();
+    return apiClient.post('/api/admin/download-all-topic-images', {});
   },
 
   correctQuestions: async (payload) => {
-    const response = await fetch(`${config.BASE_URL}/api/admin/questions/correct`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload || {}),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to correct questions: ${response.status}`);
-    }
-
-    return response.json();
+    return apiClient.post('/api/admin/questions/correct', payload || {});
   },
 
   reviewQuizBeforePublish: async (quizSlug) => {
@@ -340,30 +302,11 @@ const adminApi = {
   // ==================== AI Settings ====================
 
   getAISettings: async () => {
-    const response = await fetch(`${config.BASE_URL}/api/admin/ai/settings`, {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch AI settings: ${response.status}`);
-    }
-
-    return response.json();
+    return apiClient.get('/api/admin/ai/settings');
   },
 
   updateAISettings: async (payload) => {
-    const response = await fetch(`${config.BASE_URL}/api/admin/ai/settings`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload || {}),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to update AI settings: ${response.status}`);
-    }
-
-    return response.json();
+    return apiClient.put('/api/admin/ai/settings', payload || {});
   },
 
   // ==================== Statistics ====================
