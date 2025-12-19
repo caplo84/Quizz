@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { topicsApi, quizzesApi } from "../../services/api.js";
+import apiClient from "../../services/apiClient.js";
 
 export const fetchTopics = createAsyncThunk(
   "quiz/fetchTopics",
@@ -26,14 +27,9 @@ export const fetchRandomQuestions = createAsyncThunk(
   "quiz/fetchRandomQuestions",
   async ({ topicSlug, limit = 10, excludeIds = [] }) => {
     const excludeParam = excludeIds.length > 0 ? excludeIds.join(',') : '';
-    const response = await fetch(
-      `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/v1/topics/${topicSlug}/questions/random?limit=${limit}&exclude=${excludeParam}&include_answers=true`
+    const data = await apiClient.get(
+      `/topics/${topicSlug}/questions/random?limit=${limit}&exclude=${excludeParam}&include_answers=true`
     );
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `Failed to fetch random questions: ${response.status}`);
-    }
-    const data = await response.json();
     
     // Ensure we have questions
     if (!data.data || data.data.length === 0) {
@@ -50,13 +46,9 @@ export const fetchQuestionsWithAnswers = createAsyncThunk(
     // We'll fetch specific questions by their IDs with answers
     // For now, since we don't have a specific endpoint, we'll use the same random endpoint
     // but this should ideally be a different endpoint that accepts question IDs
-    const response = await fetch(
-      `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/v1/topics/${topicSlug}/questions/random?limit=10&include_answers=true`
+    const data = await apiClient.get(
+      `/topics/${topicSlug}/questions/random?limit=10&include_answers=true`
     );
-    if (!response.ok) {
-      throw new Error(`Failed to fetch questions with answers: ${response.status}`);
-    }
-    const data = await response.json();
     return data.data;
   }
 );
