@@ -119,25 +119,17 @@ export async function getQuiz() {
         // For external topics, use a generic programming icon, for original topics use specific icons
         const iconUrl = topic.icon_url || '/icon-js.svg'; // fallback to JS icon for external topics
         
-        // Check if this topic has quizzes by trying to fetch them
-        let quizCount = 0;
-        try {
-          const topicQuizzesResponse = await apiRequest(`/topics/${topic.slug}/quizzes`);
-          const topicQuizzes = Array.isArray(topicQuizzesResponse)
-            ? topicQuizzesResponse
-            : Array.isArray(topicQuizzesResponse?.data)
-              ? topicQuizzesResponse.data
-              : [];
+        // Prefer aggregate counts returned from backend to avoid topic-by-topic requests.
+        let quizCount = Number(
+          topic.active_quiz_count ?? topic.quiz_count ?? topic.total_quizzes ?? 0,
+        );
+        if (!Number.isFinite(quizCount) || quizCount < 0) {
+          quizCount = 0;
+        }
 
-          if (Array.isArray(topicQuizzes) && topicQuizzes.length > 0) {
-            const activeQuizzes = topicQuizzes.filter((quiz) => quiz?.is_active !== false);
-            quizCount = activeQuizzes.length;
-          }
-        } catch (error) {
-          // Keep existing UX resilient if a topic quiz endpoint intermittently fails.
-          if (source === 'manual') {
-            quizCount = 1;
-          }
+        // Preserve legacy behavior for manually curated topics when count is absent.
+        if (quizCount === 0 && source === 'manual') {
+          quizCount = 1;
         }
 
         if (quizCount > 0) {
