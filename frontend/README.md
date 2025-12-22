@@ -1,51 +1,83 @@
-# Frontend Mentor - Frontend quiz app solution
+# Quizz Frontend
 
-This is a solution to the [Frontend quiz app challenge on Frontend Mentor](https://www.frontendmentor.io/challenges/frontend-quiz-app-BE7xkzXQnU). Frontend Mentor challenges help you improve your coding skills by building realistic projects.
+Frontend for the Quizz platform, built with React and Vite, including both user and admin flows.
 
-## Table of contents
+## Tech Stack
 
-- [Overview](#overview)
-  - [The challenge](#the-challenge)
-  - [Links](#links)
-- [My process](#my-process)
-  - [Built with](#built-with)
-- [Author](#author)
+- React 18
+- React Router 6 (createBrowserRouter)
+- Redux Toolkit + React Redux
+- Tailwind CSS
+- Vite 4
 
-**Note: Delete this note and update the table of contents based on what sections you keep.**
+## Current Features
 
-## Overview
+- Modern home page at `/`
+- Legacy home page at `/legacy`
+- Topic-based quiz flow at `/:type`
+- Quiz completion screen at `/finished`
+- User flow: `/login`, `/dashboard`, `/leaderboard`
+- Admin flow:
+  - `/admin/login`
+  - `/admin`
+  - `/admin/quizzes`, `/admin/quizzes/new`, `/admin/quizzes/:id/edit`
+  - `/admin/topics`, `/admin/topics/new`
+  - `/admin/sync`, `/admin/bulk`, `/admin/settings`
 
-### The challenge
+## Environment Requirements
 
-Users should be able to:
+- Node.js `>=20`
+- npm (recommended: version bundled with Node 20)
 
-- Select a quiz subject
-- Select a single answer from each question from a choice of four
-- See an error message when trying to submit an answer without making a selection
-- See if they have made a correct or incorrect choice when they submit an answer
-- Move on to the next question after seeing the question result
-- See a completed state with the score after the final question
-- Play again to choose another subject
-- View the optimal layout for the interface depending on their device's screen size
-- See hover and focus states for all interactive elements on the page
-- **Bonus**: Change the app's theme between light and dark
+## Local Development
 
-### Links
+1. Install dependencies:
 
-- Solution URL: [https://github.com/Olatoyan/frontend-quiz-app](https://github.com/Olatoyan/frontend-quiz-app)
-- Live Site URL: [https://toyan-quiz.netlify.app/](https://toyan-quiz.netlify.app/)
+```bash
+npm install
+```
 
-## My process
+2. Create or update the `.env` file inside the `frontend` directory:
 
-### Built with
+```env
+VITE_API_URL=http://localhost:8080
+VITE_API_TIMEOUT=10000
+VITE_APP_NAME=Quiz App
+VITE_APP_VERSION=1.0.0
+VITE_DEV_MODE=true
+```
 
-- Semantic HTML5 markup
-- Flexbox
-- CSS Grid
-- [React](https://reactjs.org/) - JS library
-- [Tailwind CSS](https://tailwindcss.com/) - For styles
+3. Chạy development server:
 
-## Author
+```bash
+npm run dev
+```
 
-- Frontend Mentor - [@olatoyan](https://www.frontendmentor.io/profile/olatoyan)
-- Twitter - [@Toyan](https://www.twitter.com/_annonnymouss_)
+4. Build production:
+
+```bash
+npm run build
+```
+
+5. Preview build local:
+
+```bash
+npm run preview
+```
+
+## API and Environment Variables
+
+- The frontend primarily calls the API using `VITE_API_URL`.
+- On network failures, the client can fall back to the same-origin path `/api/v1`.
+- If frontend and backend are deployed on different domains, backend CORS must allow the frontend origin.
+
+## Deployment Notes
+
+- This repository is a monorepo, and this app is located in the `frontend` directory.
+- The app builds to `dist` using `npm run build`.
+- Because routing uses Browser Router, your hosting platform should rewrite unknown routes to `index.html`.
+
+## Operational Notes
+
+- Ensure the backend is publicly reachable before deploying the frontend.
+- Verify admin routes after deployment, since routing is client-side.
