@@ -34,6 +34,19 @@ export default function HomeModern() {
     );
   }, [data, search]);
 
+  const topicCount = topics.length;
+  const totalQuestions = topics.reduce((sum, topic) => {
+    const explicitQuestionCount = Number(
+      topic.questionCount ?? topic.totalQuestionCount ?? topic.total_questions,
+    );
+    if (Number.isFinite(explicitQuestionCount) && explicitQuestionCount > 0) {
+      return sum + explicitQuestionCount;
+    }
+
+    const quizCount = Number(topic.quizCount || 0);
+    return sum + (Number.isFinite(quizCount) && quizCount > 0 ? quizCount : 0);
+  }, 0);
+
   const handleSelect = (topic) => {
     dispatch(selectQuiz(topic.title));
     dispatch(selectIcon(topic.icon));
@@ -85,13 +98,28 @@ export default function HomeModern() {
                 <span className="font-bold text-xl">Quizz</span>
               </div>
               <h1 className="text-5xl sm:text-6xl font-black mb-4 leading-tight tracking-tight">
-                New Frontend Integrated
+                Test Your Skills
                 <br />
-                <span className="text-white/80">Modern UI on Current Stack</span>
+                <span className="text-white/80">Master Any Topic</span>
               </h1>
               <p className="text-white/80 text-xl">
-                {topics.length} topics ready · Existing API contracts preserved
+                {topicCount} topics ready · Interactive quizzes · Track your progress
               </p>
+
+              <div className="mt-7 grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-xl">
+                <div className="bg-white/12 backdrop-blur-sm rounded-2xl border border-white/20 px-5 py-4 text-center">
+                  <p className="text-3xl font-bold leading-none">{topicCount}</p>
+                  <p className="text-white/80 text-sm mt-2">Topics</p>
+                </div>
+                <div className="bg-white/12 backdrop-blur-sm rounded-2xl border border-white/20 px-5 py-4 text-center">
+                  <p className="text-3xl font-bold leading-none">{totalQuestions}</p>
+                  <p className="text-white/80 text-sm mt-2">Questions</p>
+                </div>
+                <div className="bg-white/12 backdrop-blur-sm rounded-2xl border border-white/20 px-5 py-4 text-center">
+                  <p className="text-3xl font-bold leading-none">100%</p>
+                  <p className="text-white/80 text-sm mt-2">Free</p>
+                </div>
+              </div>
             </div>
 
             <div className="flex items-center gap-2 flex-wrap justify-end">
