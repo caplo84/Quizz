@@ -39,13 +39,14 @@ export default function HomeModern() {
     const explicitQuestionCount = Number(
       topic.questionCount ?? topic.totalQuestionCount ?? topic.total_questions,
     );
-    if (Number.isFinite(explicitQuestionCount) && explicitQuestionCount > 0) {
-      return sum + explicitQuestionCount;
+
+    if (!Number.isFinite(explicitQuestionCount) || explicitQuestionCount <= 0) {
+      return sum;
     }
 
-    const quizCount = Number(topic.quizCount || 0);
-    return sum + (Number.isFinite(quizCount) && quizCount > 0 ? quizCount : 0);
+    return sum + explicitQuestionCount;
   }, 0);
+  const hasQuestionTotals = totalQuestions > 0;
 
   const handleSelect = (topic) => {
     dispatch(selectQuiz(topic.title));
@@ -112,7 +113,7 @@ export default function HomeModern() {
                   <p className="text-white/80 text-sm mt-2">Topics</p>
                 </div>
                 <div className="bg-white/12 backdrop-blur-sm rounded-2xl border border-white/20 px-5 py-4 text-center">
-                  <p className="text-3xl font-bold leading-none">{totalQuestions}</p>
+                  <p className="text-3xl font-bold leading-none">{hasQuestionTotals ? totalQuestions : "--"}</p>
                   <p className="text-white/80 text-sm mt-2">Questions</p>
                 </div>
                 <div className="bg-white/12 backdrop-blur-sm rounded-2xl border border-white/20 px-5 py-4 text-center">

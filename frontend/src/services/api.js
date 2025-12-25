@@ -133,6 +133,15 @@ export async function getQuiz() {
         }
 
         if (quizCount > 0) {
+          const questionCount = Number(
+            topic.total_questions ??
+            topic.question_count ??
+            topic.total_question_count ??
+            topic.active_question_count ??
+            topic.questions_count ??
+            0,
+          );
+
           quizItems.push({
             title: topic.name,
             icon: iconUrl,
@@ -141,6 +150,7 @@ export async function getQuiz() {
             description: topic.description || `Test your knowledge of ${topic.name}`,
             source: source,
             quizCount: quizCount,
+            questionCount: Number.isFinite(questionCount) && questionCount > 0 ? questionCount : null,
           });
         }
       }
