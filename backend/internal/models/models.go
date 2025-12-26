@@ -17,6 +17,10 @@ type Topic struct {
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 
+	// Aggregate counters populated by the topics listing query.
+	ActiveQuizCount     int `json:"active_quiz_count" gorm:"column:active_quiz_count;->"`
+	ActiveQuestionCount int `json:"active_question_count" gorm:"column:active_question_count;->"`
+
 	// Relationships
 	Quizzes []Quiz `json:"quizzes,omitempty" gorm:"foreignKey:TopicID;constraint:OnDelete:CASCADE"`
 }
