@@ -16,7 +16,18 @@ func NewTopicRepository(db *gorm.DB) TopicRepository {
 
 func (r *topicRepository) GetAllTopics(ctx context.Context) ([]models.Topic, error) {
 	var topics []models.Topic
-	if err := r.db.WithContext(ctx).Find(&topics).Error; err != nil {
+	if err := r.db.WithContext(ctx).
+		Table("topics").
+		Select(`
+			topics.*,
+			COUNT(DISTINCT quizzes.id) AS active_quiz_count,
+			COUNT(questions.id) AS active_question_count
+		`).
+		Joins("LEFT JOIN quizzes ON quizzes.topic_id = topics.id AND quizzes.is_active = ?", true).
+		Joins("LEFT JOIN questions ON questions.quiz_id = quizzes.id AND questions.is_active = ?", true).
+		Group("topics.id").
+		Order("topics.name ASC").
+		Scan(&topics).Error; err != nil {
 		return nil, err
 	}
 	return topics, nil
