@@ -245,27 +245,40 @@ func (app *Application) setupRouter() *gin.Engine {
 
 	githubClient := datasources.NewGitHubClient(githubConfig)
 
-	// Initialize repositories and services with cache
-	topicRepo := repository.NewTopicRepository(app.DB)
-	topicService := services.NewTopicService(topicRepo, app.Cache)
-	topicHandler := handlers.NewTopicHandler(topicService)
+	var topicHandler *handlers.TopicHandler
+	var quizHandler *handlers.QuizHandler
+	var attemptHandler *handlers.AttemptHandler
+	var adminHandler *handlers.AdminHandler
 
-	quizRepo := repository.NewQuizRepository(app.DB)
-	quizService := services.NewQuizService(quizRepo, app.Cache)
-	quizHandler := handlers.NewQuizHandler(quizService, topicService)
+	if app.DB != nil {
+		// Initialize repositories and services with cache
+		topicRepo := repository.NewTopicRepository(app.DB)
+		topicService := services.NewTopicService(topicRepo, app.Cache)
+		topicHandler = handlers.NewTopicHandler(topicService)
 
-	attemptRepo := repository.NewAttemptRepository(app.DB)
-	attemptService := services.NewAttemptService(attemptRepo, quizService, app.Cache)
-	attemptHandler := handlers.NewAttemptHandler(attemptService, quizService)
+		quizRepo := repository.NewQuizRepository(app.DB)
+		quizService := services.NewQuizService(quizRepo, app.Cache)
+		quizHandler = handlers.NewQuizHandler(quizService, topicService)
 
-	adminService := services.NewAdminService(quizRepo, app.Cache, githubClient, topicRepo)
-	aiAnswerService := services.NewAIAnswerServiceFromEnv()
-	questionCorrector := services.NewQuizCorrectorService(app.DB, githubClient, aiAnswerService)
+		attemptRepo := repository.NewAttemptRepository(app.DB)
+		attemptService := services.NewAttemptService(attemptRepo, quizService, app.Cache)
+		attemptHandler = handlers.NewAttemptHandler(attemptService, quizService)
 
-	// Create GitHub sync service
-	githubSyncService := services.NewGitHubSyncService(githubClient, quizRepo, topicRepo)
+		adminService := services.NewAdminService(quizRepo, app.Cache, githubClient, topicRepo)
+		aiAnswerService := services.NewAIAnswerServiceFromEnv()
+		questionCorrector := services.NewQuizCorrectorService(app.DB, githubClient, aiAnswerService)
 
-	adminHandler := handlers.NewAdminHandler(adminService, githubSyncService, questionCorrector)
+		// Create GitHub sync service
+		githubSyncService := services.NewGitHubSyncService(githubClient, quizRepo, topicRepo)
+
+		adminHandler = handlers.NewAdminHandler(adminService, githubSyncService, questionCorrector)
+	} else {
+		appLogger.Log.Error("Database is unavailable; DB-backed API routes will return 503")
+	}
+
+	dbUnavailable := func(c *gin.Context) {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "database unavailable"})
+	}
 
 	var adminRateLimit gin.HandlerFunc
 	if app.Redis != nil {
@@ -279,17 +292,36 @@ func (app *Application) setupRouter() *gin.Engine {
 	v1 := router.Group("/api/v1")
 	{
 		v1.GET("/health", healthHandler.HealthCheck)
-		v1.GET("/topics", topicHandler.GetTopics)
 
-		v1.GET("/topics/:topic/quizzes", quizHandler.GetQuizzes)
-		v1.GET("/topics/:topic/questions/random", quizHandler.GetRandomQuestions)
-		v1.GET("/questions/by-ids", quizHandler.GetQuestionsByIDs) // New endpoint
-		v1.GET("/quizzes/:slug", quizHandler.GetQuizBySlug)
-		v1.GET("/quizzes/:slug/questions", quizHandler.GetQuizQuestions)
+		if topicHandler != nil {
+			v1.GET("/topics", topicHandler.GetTopics)
+		} else {
+			v1.GET("/topics", dbUnavailable)
+		}
 
-		v1.POST("/quizzes/:slug/attempts", attemptHandler.CreateAttempt)
-		v1.PUT("/quizzes/:slug/attempts/:id", attemptHandler.SubmitAttempt)
-		v1.GET("/quizzes/:slug/attempts/:id", attemptHandler.GetAttempt)
+		if quizHandler != nil {
+			v1.GET("/topics/:topic/quizzes", quizHandler.GetQuizzes)
+			v1.GET("/topics/:topic/questions/random", quizHandler.GetRandomQuestions)
+			v1.GET("/questions/by-ids", quizHandler.GetQuestionsByIDs) // New endpoint
+			v1.GET("/quizzes/:slug", quizHandler.GetQuizBySlug)
+			v1.GET("/quizzes/:slug/questions", quizHandler.GetQuizQuestions)
+		} else {
+			v1.GET("/topics/:topic/quizzes", dbUnavailable)
+			v1.GET("/topics/:topic/questions/random", dbUnavailable)
+			v1.GET("/questions/by-ids", dbUnavailable)
+			v1.GET("/quizzes/:slug", dbUnavailable)
+			v1.GET("/quizzes/:slug/questions", dbUnavailable)
+		}
+
+		if attemptHandler != nil {
+			v1.POST("/quizzes/:slug/attempts", attemptHandler.CreateAttempt)
+			v1.PUT("/quizzes/:slug/attempts/:id", attemptHandler.SubmitAttempt)
+			v1.GET("/quizzes/:slug/attempts/:id", attemptHandler.GetAttempt)
+		} else {
+			v1.POST("/quizzes/:slug/attempts", dbUnavailable)
+			v1.PUT("/quizzes/:slug/attempts/:id", dbUnavailable)
+			v1.GET("/quizzes/:slug/attempts/:id", dbUnavailable)
+		}
 
 		// Admin routes
 		admin := v1.Group("/admin")
@@ -298,14 +330,25 @@ func (app *Application) setupRouter() *gin.Engine {
 			admin.Use(adminRateLimit)
 		}
 		{
-			admin.GET("/quizzes/:id", adminHandler.GetQuizByID)
-			admin.POST("/quizzes", adminHandler.CreateQuiz)
-			admin.PUT("/quizzes/:id", adminHandler.UpdateQuiz)
-			admin.DELETE("/quizzes/:id", adminHandler.DeleteQuiz)
+			if adminHandler != nil {
+				admin.GET("/quizzes/:id", adminHandler.GetQuizByID)
+				admin.POST("/quizzes", adminHandler.CreateQuiz)
+				admin.PUT("/quizzes/:id", adminHandler.UpdateQuiz)
+				admin.DELETE("/quizzes/:id", adminHandler.DeleteQuiz)
 
-			admin.POST("/topics", adminHandler.CreateTopic)
-			admin.PUT("/topics/:id", adminHandler.UpdateTopic)
-			admin.DELETE("/topics/:id", adminHandler.DeleteTopic)
+				admin.POST("/topics", adminHandler.CreateTopic)
+				admin.PUT("/topics/:id", adminHandler.UpdateTopic)
+				admin.DELETE("/topics/:id", adminHandler.DeleteTopic)
+			} else {
+				admin.GET("/quizzes/:id", dbUnavailable)
+				admin.POST("/quizzes", dbUnavailable)
+				admin.PUT("/quizzes/:id", dbUnavailable)
+				admin.DELETE("/quizzes/:id", dbUnavailable)
+
+				admin.POST("/topics", dbUnavailable)
+				admin.PUT("/topics/:id", dbUnavailable)
+				admin.DELETE("/topics/:id", dbUnavailable)
+			}
 		}
 	}
 
@@ -315,12 +358,21 @@ func (app *Application) setupRouter() *gin.Engine {
 		adminRoutes.Use(adminRateLimit)
 	}
 	{
-		adminRoutes.POST("/sync/github", adminHandler.SyncGitHubData)
-		adminRoutes.GET("/sync/github/status", adminHandler.GetGitHubSyncStatus)
-		adminRoutes.POST("/download-all-topic-images", adminHandler.DownloadAllTopicImages)
-		adminRoutes.POST("/questions/correct", adminHandler.CorrectQuestions)
-		adminRoutes.GET("/ai/settings", adminHandler.GetAISettings)
-		adminRoutes.PUT("/ai/settings", adminHandler.UpdateAISettings)
+		if adminHandler != nil {
+			adminRoutes.POST("/sync/github", adminHandler.SyncGitHubData)
+			adminRoutes.GET("/sync/github/status", adminHandler.GetGitHubSyncStatus)
+			adminRoutes.POST("/download-all-topic-images", adminHandler.DownloadAllTopicImages)
+			adminRoutes.POST("/questions/correct", adminHandler.CorrectQuestions)
+			adminRoutes.GET("/ai/settings", adminHandler.GetAISettings)
+			adminRoutes.PUT("/ai/settings", adminHandler.UpdateAISettings)
+		} else {
+			adminRoutes.POST("/sync/github", dbUnavailable)
+			adminRoutes.GET("/sync/github/status", dbUnavailable)
+			adminRoutes.POST("/download-all-topic-images", dbUnavailable)
+			adminRoutes.POST("/questions/correct", dbUnavailable)
+			adminRoutes.GET("/ai/settings", dbUnavailable)
+			adminRoutes.PUT("/ai/settings", dbUnavailable)
+		}
 	}
 
 	router.GET("/health", healthHandler.HealthCheck)
