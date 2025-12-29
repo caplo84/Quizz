@@ -493,6 +493,11 @@
   font-weight: 700;
 }
 
+.answer-option.selected .answer-code-block pre,
+.answer-option.selected .answer-code-block code {
+  font-weight: 700;
+}
+
 .answer-option.correct {
   border-color: #10b981;
   background: #d1fae5;

@@ -16,6 +16,15 @@ function getOptionCodeLanguage(option) {
   return option?.code_language || option?.choice_code_language || "javascript";
 }
 
+function normalizeIndex(value) {
+  if (typeof value === "number") return Number.isNaN(value) ? null : value;
+  if (typeof value === "string" && value.trim() !== "") {
+    const parsed = Number(value);
+    return Number.isNaN(parsed) ? null : parsed;
+  }
+  return null;
+}
+
 function SingleChoice({ options, selected, onSelect, darkMode }) {
   return (
     <div className="space-y-3">
@@ -23,27 +32,28 @@ function SingleChoice({ options, selected, onSelect, darkMode }) {
         const optionText = getOptionText(option);
         const optionCode = getOptionCode(option);
         const optionCodeLanguage = getOptionCodeLanguage(option);
-        const isSelected = selected === index;
+        const isSelected = normalizeIndex(selected) === index;
 
         return (
           <button
             key={index}
+            type="button"
             onClick={() => onSelect(index)}
-            className={`w-full text-left p-3.5 rounded-xl border-2 transition-all duration-150 ${
+            className={`w-full text-left p-3.5 rounded-xl border-2 transition-colors duration-150 focus:outline-none ${
               isSelected
                 ? darkMode
-                  ? "border-purple-400 bg-purple-900/30"
-                  : "border-purple-500 bg-purple-50"
+                  ? "border-violet-400 bg-violet-900/35"
+                  : "border-violet-500 bg-violet-100/70"
                 : darkMode
-                  ? "border-slate-600 hover:border-purple-400 hover:bg-slate-700"
-                  : "border-slate-200 hover:border-purple-300 hover:bg-slate-50"
+                  ? "border-slate-700 hover:border-violet-400 hover:bg-slate-800"
+                  : "border-slate-300 hover:border-violet-300 hover:bg-slate-50"
             }`}
           >
             <div className="flex items-start gap-3">
               <span
                 className={`shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-bold mt-0.5 ${
                   isSelected
-                    ? "border-purple-500 bg-purple-500 text-white"
+                    ? "border-violet-500 bg-violet-500 text-white"
                     : darkMode
                       ? "border-slate-500 text-slate-300"
                       : "border-slate-300 text-slate-500"
@@ -54,7 +64,7 @@ function SingleChoice({ options, selected, onSelect, darkMode }) {
 
               <div className="flex-1 min-w-0">
                 {optionText && (
-                  <p className={`text-base ${darkMode ? "text-slate-100" : "text-slate-800"}`}>
+                  <p className={`text-base font-normal ${darkMode ? (isSelected ? "text-white" : "text-slate-100") : (isSelected ? "text-slate-900" : "text-slate-800")}`}>
                     {optionText}
                   </p>
                 )}
@@ -71,10 +81,16 @@ function SingleChoice({ options, selected, onSelect, darkMode }) {
 }
 
 function MultipleChoice({ options, selected = [], onSelect, darkMode }) {
+  const selectedIndices = Array.isArray(selected)
+    ? selected
+        .map((value) => normalizeIndex(value))
+        .filter((value) => value !== null)
+    : [];
+
   const toggle = (index) => {
-    const next = selected.includes(index)
-      ? selected.filter((item) => item !== index)
-      : [...selected, index];
+    const next = selectedIndices.includes(index)
+      ? selectedIndices.filter((item) => item !== index)
+      : [...selectedIndices, index];
     onSelect(next);
   };
 
@@ -87,32 +103,33 @@ function MultipleChoice({ options, selected = [], onSelect, darkMode }) {
         const optionText = getOptionText(option);
         const optionCode = getOptionCode(option);
         const optionCodeLanguage = getOptionCodeLanguage(option);
-        const isSelected = selected.includes(index);
+        const isSelected = selectedIndices.includes(index);
 
         return (
           <button
             key={index}
+            type="button"
             onClick={() => toggle(index)}
-            className={`w-full text-left p-3.5 rounded-xl border-2 transition-all duration-150 ${
+            className={`w-full text-left p-3.5 rounded-xl border-2 transition-colors duration-150 focus:outline-none ${
               isSelected
                 ? darkMode
-                  ? "border-purple-400 bg-purple-900/30"
-                  : "border-purple-500 bg-purple-50"
+                  ? "border-violet-400 bg-violet-900/35"
+                  : "border-violet-500 bg-violet-100/70"
                 : darkMode
-                  ? "border-slate-600 hover:border-purple-400 hover:bg-slate-700"
-                  : "border-slate-200 hover:border-purple-300 hover:bg-slate-50"
+                  ? "border-slate-700 hover:border-violet-400 hover:bg-slate-800"
+                  : "border-slate-300 hover:border-violet-300 hover:bg-slate-50"
             }`}
           >
             <div className="flex items-start gap-3">
               {isSelected ? (
-                <CheckSquare className="w-5 h-5 text-purple-500 shrink-0 mt-0.5" />
+                <CheckSquare className="w-5 h-5 text-violet-500 shrink-0 mt-0.5" />
               ) : (
                 <Square className={`w-5 h-5 shrink-0 mt-0.5 ${darkMode ? "text-slate-400" : "text-slate-400"}`} />
               )}
 
               <div className="flex-1 min-w-0">
                 {optionText && (
-                  <p className={`text-base ${darkMode ? "text-slate-100" : "text-slate-800"}`}>
+                  <p className={`text-base font-normal ${darkMode ? (isSelected ? "text-white" : "text-slate-100") : (isSelected ? "text-slate-900" : "text-slate-800")}`}>
                     {optionText}
                   </p>
                 )}
@@ -143,8 +160,8 @@ function TrueFalse({ selected, onSelect, darkMode }) {
                   ? "border-green-500 bg-green-50 text-green-700"
                   : "border-red-500 bg-red-50 text-red-700"
                 : darkMode
-                  ? "border-slate-600 text-slate-100 hover:border-purple-400"
-                  : "border-slate-200 text-slate-800 hover:border-purple-300"
+                  ? "border-slate-600 text-slate-100 hover:border-violet-400"
+                  : "border-slate-200 text-slate-800 hover:border-violet-300"
             }`}
           >
             {label}
@@ -168,8 +185,8 @@ function TextInput({ value = "", onChange, darkMode }) {
         placeholder="Your answer..."
         className={`w-full px-4 py-2.5 rounded-lg border-2 text-sm focus:outline-none transition-colors ${
           darkMode
-            ? "border-slate-600 bg-slate-800 text-white focus:border-purple-400"
-            : "border-slate-200 bg-white text-slate-900 focus:border-purple-500"
+            ? "border-slate-600 bg-slate-800 text-white focus:border-violet-400"
+            : "border-slate-200 bg-white text-slate-900 focus:border-violet-500"
         }`}
       />
     </div>
@@ -185,12 +202,12 @@ export default function AnswerInput({ question, answer, onAnswer, darkMode }) {
   }
 
   if (type === "true_false") {
-    return <TrueFalse selected={typeof answer === "number" ? answer : null} onSelect={onAnswer} darkMode={darkMode} />;
+    return <TrueFalse selected={normalizeIndex(answer)} onSelect={onAnswer} darkMode={darkMode} />;
   }
 
   if (type === "text_input") {
     return <TextInput value={typeof answer === "string" ? answer : ""} onChange={onAnswer} darkMode={darkMode} />;
   }
 
-  return <SingleChoice options={options} selected={typeof answer === "number" ? answer : null} onSelect={onAnswer} darkMode={darkMode} />;
+  return <SingleChoice options={options} selected={normalizeIndex(answer)} onSelect={onAnswer} darkMode={darkMode} />;
 }
