@@ -1,6 +1,9 @@
 import { Link, useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
 import { Award, BarChart3, BookOpen, ChevronLeft, Clock3, Target } from "lucide-react";
 import { getAttempts, getCurrentUser } from "../../utils/attemptHistory";
+import { Moon, Sun } from "lucide-react";
+import { setDarkMode } from "../home/homeSlice";
 
 function formatDuration(seconds) {
   if (!seconds) return "0m";
@@ -11,6 +14,8 @@ function formatDuration(seconds) {
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { darkMode } = useSelector((state) => state.home);
   const user = getCurrentUser();
   const attempts = getAttempts();
 
@@ -41,6 +46,15 @@ export default function Dashboard() {
           </button>
           <BarChart3 className="w-5 h-5 text-indigo-600" />
           <h1 className="font-bold flex-1 text-gray-900 dark:text-white">My Progress</h1>
+          <button
+            type="button"
+            onClick={() => dispatch(setDarkMode())}
+            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            aria-label="Toggle dark mode"
+            title="Toggle dark mode"
+          >
+            {darkMode ? <Sun className="w-4 h-4 text-yellow-300" /> : <Moon className="w-4 h-4 text-gray-700" />}
+          </button>
           <Link to="/leaderboard" className="text-xs text-gray-500 dark:text-gray-300">Leaderboard</Link>
         </div>
       </header>

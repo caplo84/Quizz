@@ -1,10 +1,20 @@
 import { createSlice } from "@reduxjs/toolkit";
 
+const getInitialDarkMode = () => {
+  if (typeof window === "undefined") return false;
+
+  const savedTheme = window.localStorage.getItem("quizz-theme");
+  if (savedTheme === "dark") return true;
+  if (savedTheme === "light") return false;
+
+  return window.matchMedia?.("(prefers-color-scheme: dark)")?.matches ?? false;
+};
+
 const initialState = {
   name: "",
   icon: "",
   quizzes: [],
-  darkMode: false,
+  darkMode: getInitialDarkMode(),
 };
 
 const homeSlice = createSlice({
@@ -25,7 +35,12 @@ const homeSlice = createSlice({
       state.icon = initialState.icon;
       state.quizzes = initialState.quizzes;
     },
-    setDarkMode(state) {
+    setDarkMode(state, action) {
+      if (typeof action.payload === "boolean") {
+        state.darkMode = action.payload;
+        return;
+      }
+
       state.darkMode = !state.darkMode;
     },
   },

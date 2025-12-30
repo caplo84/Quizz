@@ -1,4 +1,6 @@
 import { RouterProvider, createBrowserRouter } from "react-router-dom";
+import { useEffect } from "react";
+import { useSelector } from "react-redux";
 import AppLayout from "./ui/AppLayout";
 import Home from "./features/home/Home";
 import HomeModern from "./features/home/HomeModern";
@@ -22,6 +24,13 @@ import BulkOperations from "./features/admin/BulkOperations";
 import AISettings from "./features/admin/AISettings";
 
 function App() {
+  const darkMode = useSelector((state) => state.home.darkMode);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", darkMode);
+    window.localStorage.setItem("quizz-theme", darkMode ? "dark" : "light");
+  }, [darkMode]);
+
   const router = createBrowserRouter([
     {
       path: "/admin/login",

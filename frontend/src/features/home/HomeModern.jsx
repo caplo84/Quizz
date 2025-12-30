@@ -21,10 +21,6 @@ export default function HomeModern() {
     setCurrentUser(getCurrentUser());
   }, [data, dispatch]);
 
-  useEffect(() => {
-    document.documentElement.classList.toggle("dark", darkMode);
-  }, [darkMode]);
-
   const topics = useMemo(() => {
     const source = Array.isArray(data) ? data : [];
     return source.filter(

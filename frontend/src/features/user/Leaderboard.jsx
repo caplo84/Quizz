@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
-import { ChevronLeft, Clock3, Filter, Target, Trophy } from "lucide-react";
+import { ChevronLeft, Clock3, Filter, Moon, Sun, Target, Trophy } from "lucide-react";
 import { getLeaderboard } from "../../utils/attemptHistory";
+import { setDarkMode } from "../home/homeSlice";
 
 function formatTime(seconds) {
   if (!seconds) return "—";
@@ -12,6 +14,8 @@ function formatTime(seconds) {
 
 export default function Leaderboard() {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { darkMode } = useSelector((state) => state.home);
   const [selectedTopic, setSelectedTopic] = useState("all");
 
   const allAttempts = getLeaderboard("all");
@@ -31,6 +35,15 @@ export default function Leaderboard() {
           </button>
           <Trophy className="w-5 h-5 text-yellow-500" />
           <h1 className="font-bold flex-1 text-gray-900 dark:text-white">Leaderboard</h1>
+          <button
+            type="button"
+            onClick={() => dispatch(setDarkMode())}
+            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            aria-label="Toggle dark mode"
+            title="Toggle dark mode"
+          >
+            {darkMode ? <Sun className="w-4 h-4 text-yellow-300" /> : <Moon className="w-4 h-4 text-gray-700" />}
+          </button>
           <Link to="/" className="text-xs text-gray-500 dark:text-gray-300">Home</Link>
         </div>
       </header>

@@ -2,9 +2,10 @@ import { useDispatch, useSelector } from "react-redux";
 import { setAnswer, setChosenAnswer, setScore, addUserAnswer, jumpToQuestion } from "./quizSlice";
 import { useEffect, useState, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ChevronLeft, RotateCw, ArrowLeft, ArrowRight, CheckSquare } from "lucide-react";
+import { ChevronLeft, ArrowLeft, ArrowRight, CheckSquare, Moon, Sun } from "lucide-react";
 import CodeBlock from "../../ui/CodeBlock";
 import AnswerInput from "../../components/quiz/AnswerInput";
+import { setDarkMode } from "../home/homeSlice";
 
 const hasAnsweredValue = (value) => {
   if (Array.isArray(value)) {
@@ -191,10 +192,12 @@ function QuizPageNew({ question, quiz }) {
               <span>{answeredCount}/{questions.length} answered</span>
               <button
                 type="button"
+                onClick={() => dispatch(setDarkMode())}
                 className={`inline-flex items-center justify-center ml-2 p-1 rounded ${darkMode ? "hover:bg-slate-800" : "hover:bg-slate-100"}`}
-                aria-label="Refresh"
+                aria-label="Toggle dark mode"
+                title="Toggle dark mode"
               >
-                <RotateCw size={13} />
+                {darkMode ? <Sun size={13} className="text-yellow-300" /> : <Moon size={13} className="text-slate-700" />}
               </button>
             </div>
           </div>
