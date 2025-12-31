@@ -6,6 +6,7 @@ import (
 
 	"github.com/caplo84/quizz-backend/internal/models"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -23,8 +24,8 @@ func setupTestDB(t *testing.T) *gorm.DB {
 		t.Fatalf("Failed to connect to test database: %v", err)
 	}
 
-	// Auto-migrate the schema
-	err = db.AutoMigrate(&models.Topic{})
+	// Auto-migrate schemas used by repository queries (topics join quizzes/questions)
+	err = db.AutoMigrate(&models.Topic{}, &models.Quiz{}, &models.Question{})
 	if err != nil {
 		t.Fatalf("Failed to migrate test database: %v", err)
 	}
@@ -50,8 +51,8 @@ func TestTopicRepository_GetAllTopics(t *testing.T) {
 	// Test GetAllTopics
 	result, err := repo.GetAllTopics(ctx)
 
-	assert.NoError(t, err)
-	assert.Len(t, result, 2)
+	require.NoError(t, err)
+	require.Len(t, result, 2)
 	assert.Equal(t, "Programming", result[0].Name)
 	assert.Equal(t, "Science", result[1].Name)
 }
